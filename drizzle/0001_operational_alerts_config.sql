@@ -1,0 +1,2 @@
+ALTER TABLE "clinics" ADD COLUMN IF NOT EXISTS "operational_alerts_config" jsonb DEFAULT '{"enabled":false,"recipientPhone":null,"patientRegistered":{"enabled":true},"queueThreshold":{"enabled":true,"threshold":10},"lowInventory":{"enabled":true},"labRequestCreated":{"enabled":true},"unpaidInvoices":{"enabled":true,"threshold":5},"staffJoinRequest":{"enabled":true},"highPatientVolume":{"enabled":true,"threshold":50}}'::jsonb NOT NULL;
+--> statement-breakpoint

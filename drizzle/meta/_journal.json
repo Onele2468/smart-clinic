@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779391214470,
+      "tag": "0000_curious_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779395000000,
+      "tag": "0001_operational_alerts_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0002_whatsapp_messaging_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779405000000,
+      "tag": "0003_whatsapp_production_hardening",
+      "breakpoints": true
+    }
+  ]
+}

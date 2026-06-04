@@ -1,0 +1,111 @@
+Improve and finalize the clinic-type UI isolation system across the Smart Clinic platform WITHOUT breaking, restructuring, or destabilizing any existing working functionality.
+
+IMPORTANT SAFETY REQUIREMENTS:
+
+* Do NOT refactor unrelated components.
+* Do NOT modify backend business logic unless absolutely necessary.
+* Do NOT remove existing guards, routes, analytics, queues, dashboards, or authentication logic.
+* Preserve all currently working functionality.
+* Apply only targeted, minimal, production-safe changes.
+* Maintain compatibility with the existing architecture and module system.
+* Avoid introducing regressions, route failures, rendering issues, or API instability.
+* Ensure the system remains stable and fully operational after implementation.
+
+Context:
+The system already supports three clinic types:
+
+* Private Clinic
+* Government Clinic
+* NGO Clinic
+
+Backend module protection and API guards are already implemented and working correctly. However, the frontend sidebar/navigation still exposes restricted modules to government clinics in some scenarios.
+
+Required tasks:
+
+1. Sidebar Clinic Type Display
+   Update the sidebar header for all users (admins + staff) to display:
+
+* Clinic Name
+* Clinic Code
+* Clinic Type
+
+Example:
+
+Johannesburg Clinic
+SC-123330
+Private Clinic
+
+Alex Clinic
+SC-317835
+Government Clinic
+
+London Clinic
+SC-634271
+NGO Clinic
+
+Add a professional badge or label styling:
+
+* Private Clinic → green badge
+* Government Clinic → blue badge
+* NGO Clinic → purple badge
+
+The design must remain clean, compact, and consistent with the existing UI styling.
+
+2. Fix Government Clinic Sidebar Restrictions
+   Government clinics must NOT see restricted modules in the sidebar navigation.
+
+Hide these modules completely for government clinics:
+
+* Billing
+* Pharmacy
+* Laboratory
+* Inventory
+* Suppliers
+
+The sidebar filtering must use the existing:
+
+* clinicType
+* billingEnabled
+* useClinicModules()
+
+Do NOT create duplicate logic if existing module filtering already exists.
+
+Private and NGO clinics should continue seeing all enabled modules normally.
+
+3. Validate Full Frontend + Backend Consistency
+   Ensure:
+
+* hidden modules are not visible in navigation
+* direct URL access is still blocked
+* ModuleRoute protection still works
+* requireClinicModule() backend guards remain active
+* dashboard cards remain filtered correctly
+
+Do NOT alter existing backend protection architecture unless required for consistency fixes.
+
+4. Final Verification
+   Run a full E2E validation for:
+
+* Private clinic
+* Government clinic
+* NGO clinic
+
+Verify:
+
+* sidebar rendering
+* route protection
+* dashboard widgets
+* analytics visibility
+* billing visibility
+* activity logs
+* module guards
+
+Expected outcome:
+
+* Government clinics only see allowed operational modules
+* Private and NGO clinics see full functionality
+* Clinic type is visually visible throughout the system
+* Frontend and backend restrictions are fully synchronized
+* Existing functionality remains intact and stable
+* No regressions are introduced
+* System remains production-ready for publishing

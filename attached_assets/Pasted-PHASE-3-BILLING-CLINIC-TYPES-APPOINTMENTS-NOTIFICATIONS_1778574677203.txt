@@ -1,0 +1,520 @@
+PHASE 3 — BILLING, CLINIC TYPES, APPOINTMENTS, NOTIFICATIONS, INVENTORY & ANALYTICS
+
+IMPORTANT:
+You are continuing the existing SMART CLINIC healthcare platform.
+
+DO NOT:
+
+* rebuild the application
+* remove existing features
+* redesign the entire UI
+* break existing workflows
+
+You must EXTEND the current architecture professionally while preserving all existing functionality from previous phases.
+
+The system already includes:
+
+* multi-clinic architecture
+* role-based dashboards
+* queue management
+* nurse assessments
+* doctor consultations
+* prescriptions
+* pharmacy workflow
+* laboratory workflow
+* patient records
+* staff onboarding
+* authentication
+* activity logs
+* notifications
+* clinic settings
+* RBAC permissions
+
+Maintain:
+
+* current design system
+* current routing structure
+* current backend architecture
+* TypeScript safety
+* responsive UI
+* existing APIs and workflows
+
+==================================================
+PHASE 3 GOALS
+=============
+
+Implement:
+
+1. Clinic Type System
+2. Billing & Payments
+3. Appointment Scheduling
+4. Notifications Infrastructure
+5. Inventory Management
+6. Advanced Analytics
+7. Professional Testing & Validation
+
+==================================================
+
+1. CLINIC TYPE SYSTEM
+   ==================================================
+
+The platform must support multiple clinic business models.
+
+Add clinicType to the Clinic model.
+
+Allowed values:
+
+* private
+* government
+* ngo
+
+==================================================
+CLINIC TYPE RULES
+=================
+
+PRIVATE CLINICS:
+
+* Full billing enabled
+* Invoices required
+* Consultation fees enabled
+* Pharmacy billing enabled
+* Laboratory billing enabled
+* Revenue analytics enabled
+
+GOVERNMENT CLINICS:
+
+* Billing disabled by default
+* Consultations treated as free
+* Medication treated as free
+* Laboratory services treated as free
+* Queue, pharmacy, appointments, consultations, and lab workflows must still function normally
+* Revenue analytics hidden or limited
+
+NGO / COMMUNITY CLINICS:
+
+* Billing optional
+* Admin can choose whether services are free or paid
+* Admin can enable/disable billing features from settings
+
+==================================================
+CLINIC SETTINGS
+===============
+
+Create configurable financial settings:
+
+* billingEnabled
+* consultationFeeEnabled
+* pharmacyBillingEnabled
+* labBillingEnabled
+
+Admins must be able to manage these later from clinic settings.
+
+==================================================
+CLINIC ONBOARDING UPDATE
+========================
+
+Update clinic registration/onboarding.
+
+When an admin creates a clinic, require clinic type selection:
+
+* Private Clinic
+* Government Clinic
+* NGO / Community Clinic
+
+UI REQUIREMENTS:
+
+* add clinic type cards or dropdown
+* show explanations for each type
+* use clean onboarding UX
+
+BACKEND REQUIREMENTS:
+
+* validate clinic type
+* initialize proper default financial settings
+* preserve role permissions
+* maintain multi-tenant isolation
+
+==================================================
+DATABASE MIGRATIONS
+===================
+
+Create safe migrations.
+
+IMPORTANT:
+
+* Existing clinics created before this update must default to:
+  clinicType = "private"
+
+* Preserve all current clinic data
+
+* Avoid destructive migrations
+
+* Keep existing workflows functional
+
+==================================================
+2. BILLING & PAYMENTS MODULE
+============================
+
+Implement a complete billing system.
+
+NEW ROLE:
+
+* cashier
+
+Create database models/tables:
+
+* Invoice
+* InvoiceItem
+* Payment
+* Receipt
+
+==================================================
+INVOICE FIELDS
+==============
+
+Invoice:
+
+* id
+* patientId
+* doctorId
+* clinicId
+* totalAmount
+* paidAmount
+* balance
+* status:
+
+  * unpaid
+  * partial
+  * paid
+* createdAt
+* updatedAt
+
+InvoiceItem:
+
+* invoiceId
+* type:
+
+  * consultation
+  * medication
+  * laboratory
+  * procedure
+* description
+* quantity
+* unitPrice
+* total
+
+Payment:
+
+* invoiceId
+* amount
+* paymentMethod:
+
+  * cash
+  * card
+  * transfer
+  * mobile_money
+* reference
+* paidAt
+
+==================================================
+BILLING BUSINESS RULES
+======================
+
+* Government clinics must not require payments
+* Billing pages must automatically hide when billingEnabled = false
+* Backend endpoints must enforce clinic billing permissions
+* Existing workflows must still work even when billing is disabled
+
+==================================================
+BILLING FEATURES
+================
+
+Create:
+
+* invoice generation
+* payment recording
+* receipt printing
+* balance calculations
+* patient billing history
+* daily revenue reports
+
+Create pages:
+
+* /billing
+* /invoices
+* /payments
+
+WORKFLOW:
+
+* consultations can generate consultation fees
+* pharmacy medications can generate charges
+* laboratory tests can generate charges
+* cashier/receptionist records payments
+
+==================================================
+3. APPOINTMENT SYSTEM
+=====================
+
+Create a professional appointment scheduling system.
+
+Appointment fields:
+
+* patientId
+* doctorId
+* clinicId
+* appointmentDate
+* startTime
+* endTime
+* reason
+* notes
+* status:
+
+  * scheduled
+  * confirmed
+  * arrived
+  * cancelled
+  * completed
+
+==================================================
+APPOINTMENT FEATURES
+====================
+
+Create:
+
+* doctor schedules
+* appointment calendar
+* daily appointment view
+* appointment status tracking
+* queue integration
+
+Workflow:
+
+* receptionist books appointment
+* patient arrives
+* receptionist checks patient in
+* patient automatically enters queue
+
+Create pages:
+
+* /appointments
+* /calendar
+
+==================================================
+4. NOTIFICATIONS SYSTEM
+=======================
+
+Build a scalable notification infrastructure.
+
+Notification types:
+
+* sms
+* whatsapp
+* email
+* in_app
+
+Notification examples:
+
+* appointment reminders
+* prescription ready
+* lab results ready
+* payment reminders
+
+IMPORTANT:
+Do NOT integrate real WhatsApp/SMS APIs yet.
+
+Instead:
+
+* create provider-ready notification architecture
+* use mock adapters/services for now
+
+==================================================
+5. INVENTORY MANAGEMENT
+=======================
+
+Extend pharmacy into full inventory management.
+
+Create:
+
+* InventoryItem
+* Supplier
+* StockMovement
+
+Inventory features:
+
+* medicine stock tracking
+* low stock alerts
+* expiry alerts
+* supplier management
+* stock movement history
+
+WORKFLOW:
+
+* dispensing medication reduces stock automatically
+* admins/pharmacists can restock inventory
+
+Create pages:
+
+* /inventory
+* /suppliers
+
+==================================================
+6. ANALYTICS & REPORTING
+========================
+
+Create advanced analytics dashboards.
+
+ADMIN ANALYTICS:
+
+* daily patients
+* completed consultations
+* queue statistics
+* appointment statistics
+* pharmacy statistics
+* laboratory statistics
+* average waiting times
+* busiest doctors
+* most prescribed medications
+
+PRIVATE CLINICS:
+
+* revenue analytics
+* payment analytics
+* billing reports
+
+GOVERNMENT CLINICS:
+
+* operational analytics only
+* no revenue reporting
+
+==================================================
+7. ROLE PERMISSIONS
+===================
+
+Ensure proper RBAC security.
+
+ADMIN:
+
+* full access
+
+DOCTOR:
+
+* consultations
+* prescriptions
+* lab requests
+* patient records
+
+NURSE:
+
+* vitals
+* queue updates
+* assessments
+
+RECEPTIONIST:
+
+* appointments
+* patient registration
+* queue check-in
+
+PHARMACIST:
+
+* pharmacy queue
+* dispensing
+* inventory
+
+LAB TECHNICIAN:
+
+* lab requests
+* lab results
+
+CASHIER:
+
+* billing
+* invoices
+* payments
+
+PATIENTS:
+
+* must NOT access staff dashboards
+
+==================================================
+8. SYSTEM QUALITY & TESTING
+===========================
+
+IMPORTANT:
+Professionally test the entire system after implementation.
+
+Perform FULL end-to-end testing for:
+
+AUTHENTICATION:
+
+* login
+* registration
+* clinic onboarding
+* staff approvals
+
+CLINIC TYPES:
+
+* private clinic workflows
+* government clinic workflows
+* NGO clinic workflows
+
+BILLING:
+
+* invoice generation
+* payment recording
+* free clinic billing restrictions
+
+QUEUE WORKFLOW:
+
+* patient check-in
+* nurse assessment
+* doctor consultation
+* pharmacy workflow
+* lab workflow
+
+ROLE PERMISSIONS:
+
+* verify all route protections
+* verify backend authorization
+* verify clinic isolation
+
+DATABASE:
+
+* verify migrations
+* verify inserts
+* verify relationships
+* verify no broken references
+
+FRONTEND:
+
+* verify all pages render correctly
+* verify responsive layout
+* verify no runtime crashes
+* verify no console errors
+
+BACKEND:
+
+* verify APIs
+* verify validation
+* verify no HTTP 500 errors
+
+TECHNICAL REQUIREMENTS:
+
+* run full typecheck
+* ensure frontend preview loads
+* ensure backend server runs correctly
+* fix all TypeScript errors
+* preserve all previous functionality
+
+==================================================
+FINAL REQUIREMENT
+=================
+
+After all implementation is complete:
+
+* provide implementation summary
+* list new database models
+* list new routes/pages
+* explain clinic type behavior
+* explain billing behavior
+* confirm all testing passed successfully

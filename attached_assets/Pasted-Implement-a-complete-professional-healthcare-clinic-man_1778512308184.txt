@@ -1,0 +1,356 @@
+Implement a complete professional healthcare clinic management workflow upgrade for the Health Nexus system.
+
+The system already supports:
+
+authentication
+clinic creation
+clinic join requests
+staff approval
+patients
+appointments
+queue management
+dashboards
+
+Now upgrade the system into a production-style healthcare platform with proper role-based workflows, permissions, security, and operational features.
+
+STEP 1 — IMPLEMENT FULL ROLE-BASED ACCESS CONTROL (RBAC)
+
+Create strict role-based permissions for:
+
+Clinic Admin
+Doctor
+Nurse
+Receptionist
+
+Each role must have:
+
+separate dashboard
+separate sidebar navigation
+separate accessible pages
+separate API permissions
+protected frontend routes
+protected backend routes
+
+Unauthorized users must never access restricted pages or API endpoints.
+
+STEP 2 — ROLE RESPONSIBILITIES
+
+CLINIC ADMIN:
+Must be able to:
+
+approve/reject staff join requests
+manage clinic staff
+manage clinic settings
+manage all patients
+manage appointments
+view analytics
+view reports
+view activity logs
+
+Clinic Admin dashboard should show:
+
+total patients
+active queue
+appointments today
+average wait time
+recent activity
+staff overview
+
+DOCTOR:
+Must be able to:
+
+view assigned patients
+view patient history
+view appointments
+manage consultation queue
+add consultation notes
+add diagnoses
+add prescriptions
+add follow-up notes
+
+Doctor dashboard should focus on:
+
+today appointments
+waiting patients
+current consultations
+recently viewed patients
+
+Doctors must NOT access:
+
+clinic settings
+staff approvals
+admin analytics
+
+NURSE:
+Must be able to:
+
+manage patient vitals
+update queue stages
+assist with patient flow
+view limited patient information
+
+Nurse dashboard should focus on:
+
+waiting patients
+queue status
+patient vitals
+active consultations
+
+Nurses must NOT:
+
+manage clinic settings
+approve staff
+manage users
+
+RECEPTIONIST:
+Must be able to:
+
+register patients
+search patients
+create appointments
+manage queue
+update patient contact information
+
+Receptionist dashboard should focus on:
+
+patient check-ins
+queue management
+appointment bookings
+recent registrations
+
+Receptionists must NOT:
+
+access medical diagnoses
+access prescriptions
+access admin controls
+STEP 3 — PATIENT SEARCH SYSTEM
+
+Implement a professional patient search system.
+
+Patients must be searchable by:
+
+First Name
+Last Name / Surname
+Patient ID
+Contact Number
+
+Search should:
+
+work instantly while typing
+support partial matches
+ignore uppercase/lowercase differences
+display matching results dynamically
+STEP 4 — IMPROVE LIVE QUEUE WORKFLOW
+
+Upgrade the queue into a real clinic workflow.
+
+Queue stages:
+
+Waiting
+Nurse Assessment
+Doctor Consultation
+Completed
+
+Each queue entry must store:
+
+patient
+assigned staff
+queue status
+timestamps
+waiting duration
+consultation duration
+notes
+
+Add:
+
+move patient between stages
+queue counters
+wait time calculations
+real-time dashboard updates
+STEP 5 — APPOINTMENT MANAGEMENT
+
+Upgrade appointment workflow.
+
+Appointment statuses:
+
+Scheduled
+Confirmed
+In Progress
+Completed
+Cancelled
+Missed
+
+Appointments must support:
+
+patient assignment
+doctor assignment
+consultation type
+appointment notes
+date and time validation
+
+Dashboard must show:
+
+today appointments
+upcoming appointments
+completed appointments
+STEP 6 — MEDICAL RECORDS & CONSULTATION NOTES
+
+Doctors must be able to add:
+
+consultation notes
+diagnosis
+prescriptions
+treatment plans
+follow-up instructions
+
+All notes must:
+
+be timestamped
+store doctor information
+be attached to patient history
+
+Patient history should display:
+
+previous visits
+queue records
+appointments
+diagnoses
+prescriptions
+consultation notes
+STEP 7 — NOTIFICATIONS SYSTEM
+
+Implement a notification system.
+
+Notifications should appear for:
+
+new join requests
+appointment updates
+queue updates
+patient registration
+approval/rejection actions
+
+Add:
+
+notification bell
+unread count
+timestamps
+STEP 8 — AUDIT LOGS
+
+Create a professional audit trail system.
+
+Track:
+
+patient creation
+patient edits
+appointment creation
+queue updates
+staff approvals
+login/logout activity
+role changes
+
+Store:
+
+action
+user
+clinic
+timestamp
+STEP 9 — SECURITY & SESSION MANAGEMENT
+
+Improve security.
+
+Implement:
+
+protected backend middleware
+role validation middleware
+secure JWT handling
+session expiration
+inactivity auto logout
+input validation
+API error handling
+
+Prevent:
+
+unauthorized data access
+clinic cross-access
+invalid form submissions
+STEP 10 — CLINIC DATA ISOLATION
+
+VERY IMPORTANT:
+
+Each clinic must only access its own:
+
+patients
+queue entries
+staff
+appointments
+reports
+analytics
+
+No clinic should ever see another clinic’s records.
+
+Enforce this in:
+
+backend queries
+API routes
+frontend filtering
+STEP 11 — RESPONSIVE PROFESSIONAL UI
+
+Upgrade the UI to production quality.
+
+Requirements:
+
+responsive mobile layout
+responsive tablet layout
+clean modern design
+loading states
+success notifications
+empty states
+error handling
+professional spacing
+consistent colors
+smooth transitions
+
+Sidebar must:
+
+adapt to screen size
+collapse properly on mobile
+STEP 12 — DASHBOARD ANALYTICS
+
+Improve dashboards with:
+
+total patients
+active queue
+appointments today
+completed consultations
+average wait time
+queue trends
+recent activity
+role-specific statistics
+STEP 13 — CODE QUALITY
+
+Refactor and organize the codebase professionally.
+
+Requirements:
+
+reusable components
+clean folder structure
+modular backend routes
+reusable hooks/services
+consistent naming
+TypeScript-safe code
+proper error handling
+FINAL REQUIREMENTS
+
+The application must feel like a modern professional healthcare SaaS platform.
+
+Maintain:
+
+fast performance
+clean UX
+responsive design
+secure architecture
+scalable structure
+
+Do not break existing functionality while implementing these upgrades.
+
+Test all workflows end-to-end after implementation.

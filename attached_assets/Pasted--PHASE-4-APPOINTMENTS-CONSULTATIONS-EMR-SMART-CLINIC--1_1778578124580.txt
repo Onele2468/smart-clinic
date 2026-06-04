@@ -1,0 +1,393 @@
+========================================
+PHASE 4 — APPOINTMENTS, CONSULTATIONS & EMR
+SMART CLINIC PLATFORM
+========================================
+
+This phase completes the core clinical workflow of the platform.
+
+The goal is to create a full real-world patient journey:
+
+Patient Registration
+→ Appointment Scheduling
+→ Queue Management
+→ Nurse Assessment
+→ Doctor Consultation
+→ Prescription / Laboratory
+→ Billing
+→ Completion & Patient History
+
+This phase must feel professional, stable, scalable, and production-ready.
+
+IMPORTANT:
+- Read and understand the current architecture before implementation
+- Preserve all Phase 1–3 functionality
+- Preserve multi-tenant isolation
+- Preserve clinicType logic (private/government/NGO)
+- Preserve billing restrictions and feature flags
+- Preserve role-based permissions
+- Maintain OpenAPI/codegen compatibility
+- Maintain frontend/backend stability
+
+========================================
+1. ADVANCED APPOINTMENT SYSTEM
+========================================
+
+Upgrade the appointments module into a complete scheduling system.
+
+FEATURES:
+- Calendar view
+- Daily schedule
+- Weekly schedule
+- Upcoming appointments
+- Doctor schedule management
+- Time-slot booking
+- Appointment duration
+- Walk-in appointments
+- Appointment filtering/search
+- Appointment rescheduling
+- Appointment cancellation
+- Patient check-in workflow
+- Queue integration
+- Appointment completion workflow
+
+APPOINTMENT STATUSES:
+- Scheduled
+- Checked In
+- Waiting
+- In Consultation
+- Completed
+- Cancelled
+- No Show
+
+APPOINTMENT FIELDS:
+- patient
+- doctor
+- clinic
+- appointment type
+- visit reason
+- consultation notes
+- appointment date
+- appointment time
+- duration
+- status
+- createdBy
+
+UI REQUIREMENTS:
+- modern calendar UI
+- responsive layout
+- status badges
+- clean cards/tables
+- quick actions
+- empty states
+- loading states
+
+========================================
+2. DOCTOR CONSULTATION WORKFLOW
+========================================
+
+Create a professional consultation experience for doctors.
+
+CONSULTATION FEATURES:
+- chief complaint
+- symptoms
+- diagnosis
+- doctor notes
+- clinical observations
+- treatment plan
+- prescribed medications
+- requested lab tests
+- follow-up instructions
+- follow-up appointment recommendations
+
+WORKFLOW:
+- Doctor opens patient
+- Reviews nurse assessment/vitals
+- Records diagnosis
+- Creates treatment plan
+- Prescribes medication
+- Requests laboratory tests
+- Completes consultation
+
+CONSULTATION STATUS FLOW:
+- Waiting
+- In Consultation
+- Pending Lab
+- Pending Pharmacy
+- Completed
+
+========================================
+3. NURSE VITALS INTEGRATION
+========================================
+
+Integrate nurse-recorded vitals directly into consultations.
+
+DISPLAY:
+- blood pressure
+- pulse
+- temperature
+- oxygen saturation (SpO2)
+- weight
+- height
+- blood sugar
+- symptoms
+- triage level
+
+FEATURES:
+- doctor can review all assessments
+- latest vitals highlighted
+- vitals history available
+- triage badges/colors
+
+========================================
+4. ELECTRONIC MEDICAL RECORDS (EMR)
+========================================
+
+Expand patient history into a proper EMR system.
+
+PATIENT HISTORY MUST INCLUDE:
+- appointments
+- consultations
+- diagnoses
+- prescriptions
+- laboratory requests
+- laboratory results
+- invoices/payments
+- nurse assessments
+- medications dispensed
+
+CREATE:
+- chronological medical timeline
+- visit history cards
+- expandable consultation records
+- diagnosis history
+- medication history
+- lab result history
+- billing history
+
+UI:
+- timeline view
+- tabbed sections
+- clean medical record layout
+- responsive design
+
+========================================
+5. PRESCRIPTION MANAGEMENT IMPROVEMENTS
+========================================
+
+Upgrade prescription workflows.
+
+FEATURES:
+- dosage instructions
+- medication frequency
+- treatment duration
+- medication notes
+- refill tracking
+- prescription status history
+- printable prescription layout
+- prescription summary cards
+
+STATUSES:
+- Pending
+- Dispensed
+- Collected
+- Cancelled
+
+Ensure pharmacy integration continues working correctly.
+
+========================================
+6. LABORATORY WORKFLOW IMPROVEMENTS
+========================================
+
+Expand laboratory request management.
+
+FEATURES:
+- lab test categories
+- urgency levels
+- doctor instructions
+- result notes
+- preliminary/final/amended results
+- result timeline/history
+- printable lab report
+- attachment support (future-ready structure)
+
+STATUSES:
+- Pending
+- In Progress
+- Completed
+- Amended
+- Cancelled
+
+Ensure patient history updates automatically.
+
+========================================
+7. DOCTOR DASHBOARD
+========================================
+
+Create a dedicated doctor dashboard.
+
+SHOW:
+- today's appointments
+- waiting patients
+- active consultations
+- completed consultations
+- pending lab results
+- pending prescriptions
+- quick patient search
+- recent patient history
+
+Use:
+- stat cards
+- charts
+- activity feeds
+- responsive widgets
+- clean medical UI
+
+========================================
+8. REPORTS & PRINTABLE DOCUMENTS
+========================================
+
+Create professional printable/exportable layouts.
+
+EXPORTS:
+- consultation summary
+- prescription printout
+- laboratory report
+- invoice receipt
+- patient visit summary
+
+REQUIREMENTS:
+- print-friendly layouts
+- PDF-ready formatting
+- professional medical appearance
+- clinic branding support
+
+========================================
+9. AUDIT LOGS & SECURITY
+========================================
+
+Track clinical activity professionally.
+
+LOG:
+- appointment creation/updates
+- consultation creation
+- diagnosis updates
+- prescription actions
+- lab requests/results
+- invoice actions
+- payment actions
+
+AUDIT FIELDS:
+- acting user
+- clinic
+- timestamp
+- action type
+- affected patient
+
+Ensure:
+- clinic isolation
+- secure access
+- role restrictions
+- protected patient data
+
+========================================
+10. UI/UX & SYSTEM QUALITY
+========================================
+
+Improve system quality and workflow experience.
+
+REQUIREMENTS:
+- modern healthcare UI
+- responsive layouts
+- professional typography
+- clean spacing
+- smooth navigation
+- loading skeletons
+- empty states
+- status badges
+- error handling
+- polished forms
+
+Ensure:
+- no broken pages
+- no inconsistent layouts
+- no overflowing UI
+- no invalid loading states
+
+========================================
+11. MANDATORY TESTING & VERIFICATION
+========================================
+
+After implementation is complete, perform full professional testing of the entire platform.
+
+REQUIRED TESTS:
+
+APPOINTMENTS:
+- create appointment
+- reschedule appointment
+- cancel appointment
+- check-in patient
+- complete appointment
+- verify appointment statuses
+
+CONSULTATIONS:
+- create consultation
+- save diagnosis
+- save treatment plan
+- verify vitals integration
+- verify consultation history
+
+PATIENT WORKFLOW:
+- registration → queue → consultation → pharmacy/lab → billing → completion
+- verify workflow transitions
+- verify patient history updates correctly
+
+PHARMACY:
+- create prescription
+- dispense medication
+- verify inventory deduction
+- verify billing integration
+
+LABORATORY:
+- create lab request
+- process test
+- submit result
+- verify patient history updates
+
+BILLING:
+- create invoice
+- record payment
+- verify government clinics cannot bill when billing is disabled
+- verify NGO billing settings work correctly
+
+MULTI-TENANT:
+- verify clinic isolation
+- verify data does not leak between clinics
+- verify clinicType logic works independently per clinic
+
+ROLE TESTING:
+Verify permissions for:
+- admin
+- doctor
+- nurse
+- pharmacist
+- lab technician
+- cashier
+- receptionist
+
+TECHNICAL VALIDATION:
+- run frontend typecheck
+- run backend typecheck
+- run build validation
+- verify OpenAPI/codegen works
+- verify no React hook errors
+- verify no runtime crashes
+- verify no console errors
+- verify all pages load correctly
+
+FINAL VERIFICATION:
+- confirm frontend runs cleanly
+- confirm backend runs cleanly
+- confirm all workflows function properly
+- confirm the app is stable and presentation-ready
+
+Fix ALL discovered issues before final completion.

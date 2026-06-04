@@ -1,0 +1,463 @@
+Build a complete production-ready healthcare SaaS web application called SMART CLINIC.
+
+SMART CLINIC is a modern multi-clinic healthcare management and queue management platform designed for clinics, healthcare staff, administrators, and patients.
+
+The system must be scalable, secure, responsive, modern, and designed for real-world clinic operations.
+
+==================================================
+MAIN PURPOSE OF THE SYSTEM
+==========================
+
+SMART CLINIC helps clinics:
+
+* manage patients
+* manage queues
+* manage appointments
+* manage clinic staff
+* reduce waiting times
+* digitize clinic operations
+* improve clinic workflow
+* support future patient mobile apps
+
+The platform must support multiple independent clinics using the same system.
+
+Each clinic must have its own:
+
+* patients
+* staff
+* appointments
+* queues
+* analytics
+* records
+
+No clinic should ever access another clinic’s data.
+
+==================================================
+TECH STACK
+==========
+
+Frontend:
+
+* Next.js latest version
+* TypeScript
+* Tailwind CSS
+* React Hook Form
+* Zod validation
+
+Backend:
+
+* Node.js
+* Express.js
+* TypeScript
+
+Database:
+
+* PostgreSQL (Supabase)
+
+ORM:
+
+* Drizzle ORM
+
+Authentication:
+
+* Supabase Authentication
+* JWT authentication
+* role-based access control
+
+==================================================
+AUTHENTICATION SYSTEM
+=====================
+
+Features:
+
+* signup
+* login
+* logout
+* forgot password
+* email verification
+* refresh tokens
+* protected routes
+* secure JWT handling
+* session management
+
+Users must select their account type during signup.
+
+==================================================
+ACCOUNT TYPES
+=============
+
+1. Clinic Admin
+2. Receptionist
+3. Nurse
+4. Doctor
+5. Patient
+6. Super Admin (platform owner)
+
+==================================================
+IMPORTANT SYSTEM OPERATION
+==========================
+
+The platform must work like this:
+
+STEP 1:
+A clinic admin creates a new clinic.
+
+STEP 2:
+The system generates a unique clinic code.
+
+Example:
+SC-582104
+
+STEP 3:
+The clinic admin shares this clinic code with clinic staff.
+
+STEP 4:
+Staff members create accounts.
+
+STEP 5:
+Instead of creating clinics, staff users click:
+"Join Existing Clinic"
+
+STEP 6:
+Staff enters:
+
+* clinic code
+* role request
+
+STEP 7:
+The clinic admin receives join requests.
+
+STEP 8:
+Clinic admin approves or rejects users.
+
+STEP 9:
+Approved users become members of the SAME clinic.
+
+==================================================
+IMPORTANT ACCESS RULES
+======================
+
+Clinic Admin:
+
+* controls the clinic
+* approves staff
+* manages queues
+* manages appointments
+* manages patients
+* manages clinic settings
+
+Receptionist:
+
+* registers patients
+* manages queue
+* books appointments
+
+Nurse:
+
+* manages triage queue
+* updates patient notes
+
+Doctor:
+
+* views patients
+* manages consultations
+* updates records
+
+Patient:
+
+* views queue
+* books appointments
+* views appointment history
+
+==================================================
+CLINIC ONBOARDING SYSTEM
+========================
+
+CREATE CLINIC FLOW:
+
+Clinic admin enters:
+
+* clinic name
+* clinic type
+* address
+* city
+* province
+* contact number
+* email
+* latitude (optional)
+* longitude (optional)
+
+System then:
+
+* creates clinic
+* generates clinic code
+* saves clinic
+* creates clinic membership
+* links creator as admin
+* redirects to admin dashboard
+
+==================================================
+JOIN CLINIC FLOW
+================
+
+Staff enters:
+
+* clinic code
+* role
+
+System:
+
+* validates clinic code
+* creates join request
+* sends request to clinic admin
+
+Admin can:
+
+* approve
+* reject
+* assign permissions
+
+==================================================
+PATIENT MANAGEMENT
+==================
+
+Features:
+
+* patient registration
+* patient profiles
+* search patients
+* medical history
+* visit history
+* emergency contacts
+* notes
+* patient status tracking
+
+==================================================
+QUEUE MANAGEMENT SYSTEM
+=======================
+
+This is the core feature of SMART CLINIC.
+
+Features:
+
+* digital queue tickets
+* waiting numbers
+* estimated waiting times
+* emergency priority queue
+* nurse queue
+* doctor queue
+* completed queue tracking
+* skipped queue handling
+* live queue dashboard
+
+Receptionist can:
+
+* add patients to queue
+* prioritize emergencies
+* transfer queues
+
+Patients can:
+
+* see queue number
+* see estimated waiting time
+* receive updates
+
+==================================================
+APPOINTMENT SYSTEM
+==================
+
+Features:
+
+* create appointments
+* reschedule appointments
+* cancel appointments
+* doctor schedules
+* clinic schedules
+* recurring appointments
+* reminders
+
+==================================================
+STAFF MANAGEMENT
+================
+
+Clinic admin can:
+
+* invite staff
+* approve staff
+* deactivate users
+* assign permissions
+* manage roles
+
+==================================================
+ADMIN DASHBOARD
+===============
+
+Dashboard must include:
+
+* total patients
+* active queues
+* appointments today
+* waiting times
+* active staff
+* queue analytics
+* recent activity
+* clinic statistics
+
+==================================================
+PATIENT APP (FUTURE READY)
+==========================
+
+The architecture must support a future patient mobile/web app connected to the same backend.
+
+Future patient app features:
+
+* queue tracking
+* appointment booking
+* notifications
+* clinic map
+* transport requests
+
+==================================================
+MAPS AND LOCATION
+=================
+
+Clinics should support:
+
+* clinic coordinates
+* maps integration
+* nearby clinic search
+* clinic location display
+
+==================================================
+NOTIFICATIONS
+=============
+
+Support:
+
+* email notifications
+* in-app notifications
+* future WhatsApp notifications
+* queue updates
+* appointment reminders
+
+==================================================
+DATABASE REQUIREMENTS
+=====================
+
+Create normalized PostgreSQL tables for:
+
+* users
+* clinics
+* clinic_members
+* patients
+* queues
+* appointments
+* medical_records
+* join_requests
+* notifications
+* activity_logs
+
+Use:
+
+* UUID primary keys
+* foreign keys
+* timestamps
+* indexes
+* constraints
+
+==================================================
+BACKEND REQUIREMENTS
+====================
+
+Create secure REST APIs for:
+
+* auth
+* clinics
+* onboarding
+* patients
+* queues
+* appointments
+* analytics
+
+Requirements:
+
+* centralized error handling
+* JSON responses only
+* validation using Zod
+* proper middleware
+* JWT verification
+* secure role-based middleware
+* proper logging
+
+==================================================
+IMPORTANT ERROR HANDLING
+========================
+
+* backend must always return JSON
+* never expose raw SQL errors
+* wrap routes in try/catch
+* convert empty numeric values to null
+* handle validation safely
+
+==================================================
+FRONTEND REQUIREMENTS
+=====================
+
+Build a modern responsive UI:
+
+* healthcare dashboard design
+* sidebar navigation
+* responsive mobile layout
+* loading states
+* error states
+* toast notifications
+* tables
+* forms
+* cards
+* analytics widgets
+
+==================================================
+SECURITY REQUIREMENTS
+=====================
+
+Implement:
+
+* secure JWT auth
+* protected routes
+* CORS handling
+* environment variables
+* SQL injection protection
+* rate limiting
+* input sanitization
+
+==================================================
+FINAL GOAL
+==========
+
+The final system must successfully support:
+
+1. User signup/login
+2. Clinic creation
+3. Staff joining clinics via clinic code
+4. Admin approval flow
+5. Role-based dashboards
+6. Patient management
+7. Queue management
+8. Appointment management
+9. Clinic analytics
+10. Multi-clinic architecture
+
+Generate:
+
+* complete project structure
+* backend architecture
+* frontend architecture
+* database schema
+* API routes
+* authentication flow
+* onboarding flow
+* dashboard UI
+* queue system
+* deployment-ready configuration
+
+The application must feel like a professional real-world healthcare SaaS platform used by actual clinics.

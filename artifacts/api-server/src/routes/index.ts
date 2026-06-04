@@ -1,0 +1,42 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import authRouter from "./auth";
+import clinicsRouter from "./clinics";
+import patientsRouter from "./patients";
+import queuesRouter from "./queues";
+import appointmentsRouter from "./appointments";
+import analyticsRouter from "./analytics";
+import consultationNotesRouter from "./consultation_notes";
+import prescriptionsRouter from "./prescriptions";
+import nurseAssessmentsRouter from "./nurse_assessments";
+import labRouter from "./lab";
+import pharmacyRouter from "./pharmacy";
+import billingRouter from "./billing";
+import inventoryRouter from "./inventory";
+import patientPortalRouter from "./patient_portal";
+import staffAvailabilityRouter from "./staff_availability";
+import suppliersRoutes from "./suppliers";
+import whatsappRouter from "./whatsapp";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(authRouter);
+router.use(clinicsRouter);
+router.use(patientsRouter);
+router.use(queuesRouter);
+router.use(appointmentsRouter);
+router.use(analyticsRouter);
+router.use(consultationNotesRouter);
+router.use(prescriptionsRouter);
+router.use(nurseAssessmentsRouter);
+router.use(labRouter);
+router.use(pharmacyRouter);
+router.use(billingRouter);
+router.use(inventoryRouter);
+router.use(patientPortalRouter);
+router.use(staffAvailabilityRouter);
+router.use("/suppliers", suppliersRoutes);
+router.use(whatsappRouter);
+
+export default router;

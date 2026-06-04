@@ -1,0 +1,322 @@
+Fix, upgrade, and professionally harden the entire Smart Clinic system for production-ready role management, authentication, clinic-type workflows, and secure password recovery functionality.
+
+PROJECT GOAL:
+Transform Smart Clinic into a professional multi-role clinic management platform that supports:
+
+* private clinics
+* government clinics
+
+with correct role permissions, billing logic, email authentication, dashboard routing, and fully functional forgot-password recovery.
+
+1. CENTRALIZED ROLE SYSTEM
+   Create ONE centralized role enum/type/shared config and remove ALL hardcoded role arrays across frontend and backend.
+
+The system must support these roles:
+
+STAFF ROLES:
+
+* clinic_admin
+* receptionist
+* doctor
+* nurse
+* pharmacist
+* lab_technician
+* cashier
+
+PATIENT ROLE:
+
+* patient
+
+2. CLINIC TYPE SUPPORT
+
+Add clinic type support:
+
+Clinic Types:
+
+* private_clinic
+* government_clinic
+
+Rules:
+
+* private clinics CAN use billing and cashier role
+* government clinics MUST disable cashier role and billing modules
+
+Behavior:
+
+* if clinic_type = government_clinic:
+
+  * hide Billing module
+  * hide Cashier role
+  * disable invoices/payments
+  * disable payment requirements
+
+* if clinic_type = private_clinic:
+
+  * enable Billing
+  * enable Cashier
+  * enable invoices/payments
+
+Admin should choose clinic type during clinic creation.
+
+3. ROLE CONSISTENCY FIXES
+
+Ensure ALL roles appear consistently everywhere.
+
+Fix ALL dropdowns and role selectors:
+
+* Register page
+* Join clinic page
+* Staff management page
+* Role switchers
+* Invite flows
+* Dashboard routing
+* Auth middleware
+* Protected routes
+* Navigation menus
+
+Currently missing:
+
+* pharmacist
+* lab_technician
+
+Ensure these are fully visible and functional everywhere in the application.
+
+4. CASHIER ROLE IMPLEMENTATION
+
+Create a dedicated Cashier role for private clinics.
+
+Cashier permissions:
+
+* view invoices
+* process payments
+* confirm payments
+* manage billing queue
+* print receipts
+* mark invoices paid/unpaid
+
+Cashier MUST NOT:
+
+* prescribe medication
+* access doctor consultation notes
+* modify lab results
+
+Add:
+
+* cashier dashboard
+* billing navigation
+* payment summary widgets
+
+Ensure cashier role is automatically hidden and inaccessible in government clinics.
+
+5. PROFESSIONAL AUTHENTICATION SYSTEM
+
+Fix and harden the authentication system completely.
+
+Requirements:
+
+* registration works for every role
+* login works for every role
+* patient login works
+* clinic join requests work
+* JWT/session auth works correctly
+* role-based redirects work correctly
+
+Fix:
+
+* receptionist login failures
+* lab technician login failures
+* inconsistent role mapping
+
+6. PROFESSIONAL EMAIL / GMAIL FUNCTIONALITY
+
+Implement real professional email flows using Gmail/SMTP or Resend properly.
+
+Every user must receive proper authentication emails individually.
+
+Required email flows:
+
+* registration confirmation
+* clinic join approval
+* welcome email
+* password reset email
+* login notification (optional)
+* account created notification
+* email verification
+
+Requirements:
+
+* emails must send to the correct Gmail account per user
+* dynamic user-based email templates
+* proper HTML email templates
+* branded Smart Clinic emails
+* production-safe email handling
+* graceful email failure handling
+
+Fix any current Gmail/email issues and verify successful delivery.
+
+7. FULLY FUNCTIONAL FORGOT PASSWORD SYSTEM
+
+Implement a complete and fully working forgot/reset password flow professionally.
+
+Requirements:
+
+* “Forgot Password?” link on login page
+* secure reset token generation
+* email reset link
+* password reset page
+* token expiration
+* success/failure handling
+* mobile responsive UI
+* secure password hashing
+* token invalidation after successful reset
+
+Critical Requirement:
+
+* Forgot password MUST work correctly for ALL users and ALL roles.
+* Every user must successfully receive their own password reset email in their Gmail account.
+* Reset links must correctly redirect users to the reset-password page.
+* Users must be able to create a new password and log in successfully afterward.
+* Test the forgot-password flow end-to-end for every role.
+
+8. DASHBOARD & ROUTING FIXES
+
+Ensure each role gets the correct dashboard and permissions.
+
+Required dashboards:
+
+* clinic admin dashboard
+* receptionist dashboard
+* doctor dashboard
+* nurse dashboard
+* pharmacist dashboard
+* lab technician dashboard
+* cashier dashboard
+* patient portal
+
+Fix:
+
+* incorrect redirects
+* missing role routes
+* unauthorized access bugs
+* role mismatch issues
+
+9. PATIENT FLOW SECURITY
+
+Current patient flow is correct:
+patients cannot directly book clinic appointments themselves.
+
+Keep this workflow:
+
+* patient joins clinic
+* receptionist/admin creates appointments
+* patient can only VIEW:
+
+  * appointments
+  * prescriptions
+  * invoices
+  * lab results
+  * medical records
+
+Ensure this remains secure.
+
+10. UI/UX IMPROVEMENTS
+
+Professionally polish:
+
+* role dropdowns
+* auth pages
+* forgot password pages
+* reset password pages
+* email verification screens
+* dashboard navigation
+* mobile responsiveness
+* loading/error states
+
+Ensure:
+
+* responsive on phones
+* responsive on tablets
+* responsive on desktop
+
+11. SECURITY HARDENING
+
+Ensure:
+
+* no HTML 500 errors
+* all API errors return JSON
+* global error middleware exists
+* try/catch exists on all auth routes
+* role validation is strict
+* clinic isolation/security works
+* unauthorized role escalation is blocked
+
+12. DATABASE & SCHEMA UPDATES
+
+Update schema safely for:
+
+* cashier role
+* clinic types
+* password reset tokens
+* email verification
+* billing permissions
+
+Run migrations safely.
+
+13. FULL TESTING
+
+Run complete E2E tests for ALL roles:
+
+* clinic_admin
+* receptionist
+* doctor
+* nurse
+* pharmacist
+* lab_technician
+* cashier
+* patient
+
+Test:
+
+* register
+* login
+* join clinic
+* role redirects
+* permissions
+* dashboard access
+* billing access
+* password reset
+* forgot password email delivery
+* reset password completion
+* email verification
+* mobile auth flow
+
+14. FINAL VALIDATION & AUDIT
+
+Provide final audit showing:
+
+* all roles working
+* all dashboards accessible
+* Gmail/email working
+* forgot password fully working
+* password reset emails successfully delivered
+* reset-password flow tested successfully
+* cashier working only in private clinics
+* government clinic restrictions working
+* production deployment healthy
+* no broken routes
+* no missing role dropdowns
+* no auth inconsistencies
+
+Return:
+
+* test summary
+* fixed files
+* new files
+* migrations
+* deployment verification
+* production health checks
+* email delivery confirmation
+* forgot-password test confirmation
+* screenshots/logs where applicable
+
+Ensure the Smart Clinic system is fully production-ready, stable, secure, scalable, professionally structured, and that the forgot-password functionality works reliably for every user role.

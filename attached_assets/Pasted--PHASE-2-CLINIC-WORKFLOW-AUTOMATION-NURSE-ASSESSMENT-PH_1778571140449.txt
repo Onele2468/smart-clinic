@@ -1,0 +1,445 @@
+# PHASE 2 — CLINIC WORKFLOW AUTOMATION, NURSE ASSESSMENT, PHARMACY & LAB MODULES
+
+We have successfully completed the first major phase of the clinic management system including:
+
+* Multi-clinic architecture
+* Staff roles and permissions
+* Staff-only registration using clinic codes
+* Patient registration
+* Appointments
+* Role-based dashboards
+* Queue management UI
+* Prescriptions
+* Consultation notes
+* Activity logs
+* Clinic settings
+* Staff filtering
+* Doctor/Nurse/Reception/Admin dashboards
+
+The system is stable and functioning correctly.
+
+Now implement the next major phase focused on REAL CLINIC WORKFLOW AUTOMATION and MEDICAL OPERATIONS.
+
+---
+
+## PHASE 2 GOALS
+
+Transform the current system from a basic management platform into a real operational clinic workflow system.
+
+The focus is:
+
+1. Queue automation
+2. Nurse assessment workflow
+3. Doctor consultation workflow
+4. Pharmacy module
+5. Lab module
+6. Patient medical timeline
+7. Stronger permissions and security
+8. Better clinic workflow intelligence
+
+---
+
+1. AUTOMATED CLINIC QUEUE WORKFLOW
+
+---
+
+Implement real workflow progression.
+
+CURRENT:
+Appointments and queues exist separately.
+
+NEW WORKFLOW:
+
+Appointment booked
+→ Reception checks patient in
+→ Patient enters "Waiting"
+→ Nurse moves patient to "Nurse Assessment"
+→ Nurse completes vitals
+→ Patient moves to "Doctor Consultation"
+→ Doctor consults patient
+→ Doctor may:
+
+* complete visit
+* send to pharmacy
+* send to lab
+* request follow-up
+  → Visit marked completed
+
+REQUIREMENTS:
+
+* Add queue status transitions
+* Add timestamps for each stage
+* Automatically track waiting time
+* Track consultation duration
+* Show queue history in patient profile
+
+QUEUE STATUSES:
+
+* waiting
+* nurse_assessment
+* doctor_consultation
+* pharmacy
+* laboratory
+* completed
+* cancelled
+
+---
+
+2. RECEPTION CHECK-IN SYSTEM
+
+---
+
+Receptionist dashboard must support:
+
+* Check-in patient
+* Add patient to queue
+* Walk-in patient registration
+* Appointment confirmation
+* Queue position display
+
+When receptionist checks in a patient:
+
+* patient automatically enters queue
+* queue card appears live on all dashboards
+
+---
+
+3. NURSE ASSESSMENT MODULE
+
+---
+
+Create a complete Nurse Assessment system.
+
+Nurses must be able to record:
+
+* Blood pressure
+* Temperature
+* Pulse rate
+* Oxygen saturation
+* Weight
+* Height
+* Blood sugar
+* Symptoms
+* Triage notes
+
+DATABASE:
+Create a nurse_assessments table linked to:
+
+* patient
+* clinic
+* nurse
+* visit/session
+
+NURSE WORKFLOW:
+
+* Open patient queue card
+* Record vitals
+* Save assessment
+* Move patient to doctor consultation queue
+
+DOCTOR VIEW:
+Doctors must automatically see:
+
+* latest vitals
+* nurse notes
+* triage information
+
+---
+
+4. DOCTOR CONSULTATION WORKFLOW
+
+---
+
+Improve doctor consultation functionality.
+
+DOCTOR ACTIONS:
+
+* Start consultation
+* Complete consultation
+* Add diagnosis
+* Add treatment plan
+* Add consultation notes
+* Prescribe medication
+* Request lab tests
+* Refer to pharmacy
+* Schedule follow-up visit
+
+CONSULTATION RECORDS MUST STORE:
+
+* chief complaint
+* diagnosis
+* treatment
+* notes
+* follow-up instructions
+* consultation duration
+* doctor ID
+* timestamps
+
+---
+
+5. PHARMACY MODULE
+
+---
+
+Create a full Pharmacy workflow.
+
+NEW ROLE:
+
+* Pharmacist
+
+STAFF CODE:
+
+* PH-001 format
+
+PHARMACY DASHBOARD:
+
+* Incoming prescriptions
+* Dispensed medication queue
+* Medication history
+* Pending collections
+
+PRESCRIPTION WORKFLOW:
+
+Doctor issues prescription
+→ Prescription appears in pharmacy queue
+→ Pharmacist dispenses medicine
+→ Mark prescription as:
+
+* pending
+* dispensed
+* collected
+* cancelled
+
+PRESCRIPTION DETAILS MUST INCLUDE:
+
+* medication name
+* dosage
+* frequency
+* duration
+* instructions
+* prescribed by
+* dispensed by
+* timestamps
+
+---
+
+6. LABORATORY MODULE
+
+---
+
+Create Laboratory functionality.
+
+NEW ROLE:
+
+* Lab Technician
+
+STAFF CODE:
+
+* LB-001 format
+
+DOCTOR CAN REQUEST TESTS:
+
+Examples:
+
+* Blood Test
+* HIV Test
+* COVID Test
+* Urine Test
+* X-Ray
+* MRI
+* Glucose Test
+
+LAB WORKFLOW:
+
+Doctor requests test
+→ Request enters laboratory queue
+→ Lab technician uploads results
+→ Doctor receives results
+→ Results saved in patient history
+
+CREATE:
+
+lab_requests table
+lab_results table
+
+LAB RESULTS MUST SUPPORT:
+
+* test name
+* result text
+* attachments/files
+* status
+* technician
+* doctor
+* timestamps
+
+---
+
+7. PATIENT MEDICAL TIMELINE
+
+---
+
+Create a full patient medical history timeline.
+
+Patient profile should display:
+
+* Appointments
+* Queue visits
+* Nurse assessments
+* Consultation notes
+* Prescriptions
+* Lab requests
+* Lab results
+* Completed visits
+* Diagnoses history
+
+Display everything chronologically.
+
+This should become the clinic’s central patient record.
+
+---
+
+8. PERMISSIONS & SECURITY
+
+---
+
+Strengthen role permissions.
+
+RECEPTIONIST:
+
+* manage appointments
+* register patients
+* check-in patients
+* manage queue
+* cannot prescribe
+* cannot access clinic settings
+
+NURSE:
+
+* access assigned patients
+* perform assessments
+* update vitals
+* cannot prescribe
+
+DOCTOR:
+
+* consultations
+* prescriptions
+* lab requests
+* patient records
+
+PHARMACIST:
+
+* pharmacy queue only
+* medication dispensing only
+
+LAB TECHNICIAN:
+
+* lab requests/results only
+
+ADMIN:
+
+* full clinic management
+
+---
+
+9. REAL-TIME DASHBOARD UPDATES
+
+---
+
+Implement live updates across dashboards.
+
+Examples:
+
+* patient checked in
+* moved to nurse
+* moved to doctor
+* prescription ready
+* lab result uploaded
+
+All dashboards should update automatically without refreshing.
+
+---
+
+10. REPORTING & ANALYTICS
+
+---
+
+Add clinic analytics.
+
+ADMIN DASHBOARD SHOULD SHOW:
+
+* daily patients
+* completed visits
+* average waiting time
+* most prescribed medications
+* busiest doctors
+* queue statistics
+* pharmacy statistics
+* lab statistics
+
+---
+
+11. DATABASE IMPROVEMENTS
+
+---
+
+Add proper relationships and indexes.
+
+Ensure:
+
+* clinic data isolation
+* audit trails
+* timestamps on all medical records
+* soft delete support where necessary
+
+---
+
+12. UI/UX IMPROVEMENTS
+
+---
+
+Keep current clean design.
+
+Improve:
+
+* workflow clarity
+* patient queue cards
+* status badges
+* consultation flow
+* prescription readability
+* lab request tracking
+
+Do NOT redesign the entire application.
+Focus on workflow efficiency and medical usability.
+
+---
+
+13. IMPORTANT ARCHITECTURE RULES
+
+---
+
+* Maintain multi-clinic isolation
+* Keep staff app separated from future patient app
+* Patients must NOT access clinic management pages
+* Build APIs that can later connect to a separate patient mobile/web app
+* Maintain scalable backend architecture
+
+---
+
+14. FINAL REQUIREMENTS
+
+---
+
+After implementation:
+
+* run database migrations
+* update backend APIs
+* update frontend pages
+* test all workflows
+* verify role permissions
+* verify queue transitions
+* verify pharmacy/lab flows
+* ensure no TypeScript errors
+* ensure app builds successfully
+
+Provide a final implementation summary after completion.

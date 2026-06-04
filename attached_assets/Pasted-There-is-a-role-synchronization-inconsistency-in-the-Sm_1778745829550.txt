@@ -1,0 +1,135 @@
+There is a role synchronization inconsistency in the Smart Clinic platform.
+
+Problem discovered during manual testing:
+
+The main registration flow includes all roles:
+- doctor
+- nurse
+- receptionist
+- pharmacist
+- lab_technician
+- cashier
+- clinic_admin
+
+However, the Join Clinic workflow only shows:
+- doctor
+- nurse
+- receptionist
+- patient
+
+This indicates the platform role system is not fully synchronized across all workflows.
+
+I do NOT want a partial fix.
+
+Perform a FULL ROLE SYSTEM SYNCHRONIZATION AUDIT across the entire platform.
+
+==================================================
+REQUIRED TASKS
+==================================================
+
+1. Centralize ALL role definitions into a single source of truth.
+
+Ensure all enums/constants/types are synchronized across:
+- frontend
+- backend
+- API validation
+- database schemas
+- onboarding
+- staff management
+- permissions
+- dashboards
+- protected routes
+- middleware
+- UI dropdowns
+- role guards
+- audit logging
+- notifications
+
+==================================================
+JOIN CLINIC FIX
+==================================================
+
+Update Join Clinic role selection to support ALL valid clinic staff roles:
+
+- doctor
+- nurse
+- receptionist
+- pharmacist
+- lab_technician
+- cashier
+
+Do NOT expose:
+- clinic_admin
+through public join requests unless intentionally allowed.
+
+==================================================
+ROLE VALIDATION AUDIT
+==================================================
+
+Verify ALL roles function correctly across:
+- registration
+- login
+- onboarding
+- clinic joining
+- approvals
+- dashboard loading
+- permissions
+- navigation
+- route protection
+- queue workflows
+- EMR access
+- billing access
+- pharmacy access
+- laboratory access
+- analytics access
+- notifications
+
+==================================================
+SECURITY VALIDATION
+==================================================
+
+Verify:
+- patients cannot access staff routes
+- staff cannot access unauthorized modules
+- role escalation is impossible
+- invalid roles are rejected
+- unauthorized APIs return correct status codes
+
+==================================================
+UI CONSISTENCY
+==================================================
+
+Ensure all role dropdowns and labels are consistent everywhere in the system.
+
+No outdated hardcoded role lists should remain anywhere.
+
+==================================================
+TESTING
+==================================================
+
+Run full validation for:
+- pharmacist onboarding
+- lab technician onboarding
+- cashier onboarding
+
+Then verify:
+- approval workflow
+- dashboard rendering
+- permissions
+- protected routes
+- API access
+- middleware enforcement
+
+==================================================
+FINAL REQUIREMENT
+==================================================
+
+Search the ENTIRE codebase for:
+- duplicated role arrays
+- outdated role enums
+- hardcoded role checks
+- inconsistent role labels
+
+Fix ALL inconsistencies globally.
+
+Do not complete until the role system is fully centralized, synchronized, secure, and production-safe.

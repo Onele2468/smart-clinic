@@ -1,0 +1,85 @@
+Please fully audit and finalize the production email OTP system professionally.
+
+IMPORTANT:
+I accidentally entered incorrect/manual credentials during the Resend setup process earlier. Please check the entire project and remove/fix any incorrect Resend configuration, broken credentials usage, hardcoded email values, invalid API keys, or bad initialization logic that may still exist.
+
+Tasks:
+
+1. Audit the complete Resend integration
+
+   * remove invalid/manual configurations
+   * remove incorrect credentials usage
+   * remove hardcoded passwords or fake API values if they exist
+   * ensure the system ONLY uses Replit Secrets securely
+
+2. Configure production-ready email sending using:
+
+   * RESEND_API_KEY
+   * RESEND_FROM_EMAIL
+
+3. If no verified domain exists yet:
+
+   * temporarily use [onboarding@resend.dev](mailto:onboarding@resend.dev)
+   * ensure the app still works correctly in production/testing
+
+4. Verify all backend email services initialize safely:
+
+   * no startup crashes
+   * no undefined Resend instances
+   * no module-load failures
+   * no runtime email errors
+
+5. Fully test the OTP system end-to-end:
+
+   * staff registration
+   * patient registration
+   * OTP send
+   * OTP resend
+   * OTP verification
+   * verified login
+   * unverified login behavior
+   * expired OTP handling
+   * incorrect OTP handling
+
+6. Verify both applications professionally:
+
+   * Smart Clinic portal
+   * Patient Portal
+
+7. Ensure:
+
+   * clean UI/UX
+   * no console errors
+   * no API failures
+   * no HMR issues
+   * proper loading states
+   * proper error handling
+   * proper success messages
+   * secure rate limiting
+
+8. Keep demo accounts bypassing OTP ONLY inside demo routes.
+
+9. Verify deployment readiness:
+
+   * Replit deployment
+   * production environment
+   * environment variables
+   * API stability
+   * database stability
+
+10. Run final professional checks:
+
+* api-server typecheck
+* smart-clinic typecheck
+* patient-portal typecheck
+* final restart tests
+* final browser tests
+
+11. After completion, provide:
+
+* final deployment readiness report
+* email system status
+* OTP system status
+* remaining production recommendations if any
+
+Test everything professionally and ensure the system is stable, secure, and presentation-ready.

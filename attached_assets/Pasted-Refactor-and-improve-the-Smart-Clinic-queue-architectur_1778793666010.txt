@@ -1,0 +1,255 @@
+Refactor and improve the Smart Clinic queue architecture so that each department and role only sees its own workflow-specific queue instead of a shared global clinic queue.
+
+IMPORTANT:
+Do NOT redesign or rewrite the existing queue system.
+Do NOT break current workflows.
+This must be a safe architectural refinement of the existing queue visibility logic.
+
+OBJECTIVE:
+Convert the current queue visibility system into a department-based workflow queue architecture.
+
+==================================================
+QUEUE ARCHITECTURE REQUIREMENTS
+===============================
+
+Each role/department must only see queue items relevant to their workflow stage.
+
+==================================================
+
+1. RECEPTION QUEUE
+   ==================================================
+
+Visible To:
+
+* receptionist
+* clinic_admin
+
+Purpose:
+Manage patient arrivals and consultation flow.
+
+Reception Queue Should Show:
+
+* checked-in patients
+* waiting patients
+* doctor assignment status
+* appointment status
+* queue ticket number
+* arrival timestamps
+
+==================================================
+2. DOCTOR CONSULTATION QUEUE
+============================
+
+Visible To:
+
+* doctor
+* clinic_admin
+
+Purpose:
+Manage consultation workflow.
+
+Doctor Queue Should Show:
+
+* assigned patients
+* waiting consultations
+* active consultations
+* consultation status
+* patient priority
+* queue order
+
+Doctors must NOT see:
+
+* pharmacy workflow queue
+* cashier workflow queue
+
+==================================================
+3. LABORATORY QUEUE
+===================
+
+Visible To:
+
+* lab_technician
+* clinic_admin
+
+Purpose:
+Manage laboratory workflow.
+
+Lab Queue Should Show:
+
+* pending lab requests
+* in-progress tests
+* completed tests awaiting review
+* test priority
+* requesting doctor
+
+Lab technicians must NOT see:
+
+* cashier queue
+* pharmacy queue
+* unrelated consultation queues
+
+==================================================
+4. PHARMACY WORKFLOW QUEUE
+==========================
+
+Visible To:
+
+* pharmacist
+* clinic_admin
+
+Purpose:
+Manage prescription dispensing workflow.
+
+Pharmacy Queue Should ONLY Show:
+
+* patients with completed consultations
+* patients with active prescriptions
+* patients waiting for dispensing
+* dispense status
+* collection status
+
+Pharmacists must NOT see:
+
+* full clinic waiting queue
+* consultation queue
+* unrelated patient workflow stages
+
+Patients should automatically appear in the pharmacy queue ONLY after:
+
+* consultation completed
+  AND
+* prescription created
+
+==================================================
+5. CASHIER PAYMENT QUEUE
+========================
+
+Visible To:
+
+* cashier
+* clinic_admin
+
+Purpose:
+Manage payment workflows.
+
+Cashier Queue Should Show:
+
+* unpaid invoices
+* pending payments
+* partially paid invoices
+* payment status
+* invoice totals
+
+Cashiers must NOT access:
+
+* EMR records
+* lab workflows
+* consultation queues
+
+==================================================
+6. PATIENT LIVE QUEUE
+=====================
+
+Visible To:
+
+* patient only
+
+Patients must ONLY see:
+
+* their own queue number
+* current serving number
+* estimated waiting position
+* current workflow stage
+
+Patients must NEVER see:
+
+* other patient details
+* medical information
+* staff-only workflows
+
+==================================================
+7. WORKFLOW TRANSITIONS
+=======================
+
+Queue movement must happen automatically based on workflow progression.
+
+Examples:
+
+Reception Queue
+→ Doctor Queue
+→ Lab Queue (if requested)
+→ Pharmacy Queue (if prescription exists)
+→ Cashier Queue (private clinics only)
+→ Completed
+
+Ensure queue transitions are:
+
+* automatic
+* workflow-driven
+* role-aware
+* clinic-type aware
+
+==================================================
+8. CLINIC TYPE LOGIC
+====================
+
+Government Clinics:
+
+* no cashier queue
+* no billing queue
+* no payment workflow
+
+Private Clinics:
+
+* full queue architecture enabled
+
+NGO Clinics:
+
+* configurable workflow visibility
+
+==================================================
+9. SECURITY & PRIVACY
+=====================
+
+Ensure:
+
+* strict role-based queue visibility
+* no unauthorized queue access
+* patient privacy protection
+* no cross-department queue leakage
+
+==================================================
+10. UI/UX REQUIREMENTS
+======================
+
+Keep:
+
+* existing UI structure
+* existing design system
+* existing queue components where possible
+
+Only refine:
+
+* queue filtering
+* workflow visibility
+* department isolation
+
+Do NOT redesign dashboards unnecessarily.
+
+==================================================
+11. VALIDATION & TESTING
+========================
+
+After implementation:
+
+* test every role queue independently
+* test workflow transitions
+* test automatic queue movement
+* test clinic-type restrictions
+* test role permissions
+* verify no workflow regressions
+* verify queue synchronization
+
+IMPORTANT:
+This task is a queue architecture refinement, NOT a system rewrite.
+Preserve all stable existing workflows while improving department-specific queue visibility professionally.

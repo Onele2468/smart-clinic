@@ -1,0 +1,300 @@
+# SMART CLINIC — Phase 2 Step 7
+
+## Clinic Performance & Operational Analytics System
+
+Build a complete Clinic Performance and Operational Analytics system on top of the existing activity log infrastructure.
+
+IMPORTANT:
+This must EXTEND the current architecture.
+Do NOT rewrite existing queue, billing, clinic-type, routing, or logging systems.
+
+The system already has:
+
+* activity_logs table
+* centralized logActivity() utility
+* clinic type module guards
+* queue stage tracking
+* role system
+* module visibility system
+* audit trail functionality
+
+Use these existing systems as the source of truth.
+
+---
+
+## OBJECTIVE
+
+Create a real operational analytics layer for clinics.
+
+The system must measure:
+
+* clinic efficiency
+* patient flow
+* queue performance
+* staff workload
+* operational activity
+* service delivery metrics
+
+This is NOT financial accounting software.
+
+This is healthcare operational intelligence.
+
+---
+
+## ARCHITECTURE RULES
+
+1. NEVER duplicate logic already available in:
+
+* activity logs
+* queues
+* appointments
+* prescriptions
+* billing
+* lab requests
+
+2. ALL analytics must be calculated from:
+
+* real database data
+* timestamps
+* existing workflow actions
+* activity log events
+
+3. Use aggregation queries and reusable service functions.
+
+4. Keep backward compatibility.
+
+5. Government clinics must NOT show:
+
+* revenue analytics
+* financial performance
+* billing income charts
+
+6. Private and NGO clinics may show:
+
+* operational metrics
+* financial metrics
+* revenue trends
+
+---
+
+## PHASE 2 STEP 7 — FEATURES
+
+# 1. Clinic Performance Dashboard
+
+Create a new analytics dashboard page.
+
+Suggested route:
+
+* /analytics
+  or
+* /clinic-performance
+
+Admin only.
+
+---
+
+# 2. Core Operational Metrics
+
+Calculate and display:
+
+## Patient Metrics
+
+* Total patients today
+* New patients this week
+* Appointments completed
+* Queue completion rate
+* Average daily patient load
+
+## Queue Metrics
+
+* Average wait time
+* Average consultation duration
+* Longest waiting stage
+* Queue bottleneck detection
+* Patients currently active
+
+## Staff Metrics
+
+* Patients handled per nurse
+* Consultations per doctor
+* Prescriptions issued
+* Lab requests processed
+* Most active staff member
+
+## Clinic Activity Metrics
+
+* Most used module
+* Peak operating hours
+* Daily activity trend
+* Weekly operational trend
+* Monthly usage overview
+
+---
+
+# 3. Government Clinic Restrictions
+
+Government clinics:
+
+* hide all revenue analytics
+* hide invoice metrics
+* hide billing income charts
+
+Government clinics should instead focus on:
+
+* operational efficiency
+* patient throughput
+* wait times
+* staffing activity
+
+This MUST integrate with:
+useClinicModules()
+
+Do NOT hardcode clinic types.
+
+---
+
+# 4. Analytics API
+
+Create reusable analytics endpoints.
+
+Suggested structure:
+
+* GET /clinics/:clinicId/analytics/overview
+* GET /clinics/:clinicId/analytics/queue
+* GET /clinics/:clinicId/analytics/staff
+* GET /clinics/:clinicId/analytics/activity
+
+Requirements:
+
+* paginated where necessary
+* filterable by:
+
+  * date range
+  * staff role
+  * module
+  * clinic type
+* secure admin-only access
+* clinic-scoped data only
+
+---
+
+# 5. Performance Calculations
+
+Use REAL timestamps.
+
+Examples:
+
+Queue wait time:
+
+* waiting → nurse_assessment timestamp difference
+
+Consultation duration:
+
+* doctor_consultation start/end difference
+
+Completion rate:
+
+* completed patients ÷ total patients
+
+Do NOT use fake/random demo calculations.
+
+---
+
+# 6. Analytics Components
+
+Build reusable frontend components:
+
+* Stat cards
+* Performance charts
+* Activity heatmaps
+* Queue trend graphs
+* Staff ranking tables
+* Operational summaries
+
+Use clean enterprise dashboard styling.
+
+---
+
+# 7. Database & Performance Rules
+
+IMPORTANT:
+
+Analytics queries must:
+
+* be optimized
+* avoid N+1 queries
+* use indexed fields
+* support scaling
+
+Prefer:
+
+* aggregation queries
+* grouped counts
+* reusable analytics services
+
+Do NOT block existing workflows.
+
+---
+
+# 8. Activity Log Integration
+
+The analytics system MUST use:
+
+* activity_logs
+* queue timestamps
+* appointment records
+* prescription records
+* lab activity
+* inventory activity
+
+The logging system is now the analytics foundation.
+
+Do NOT create duplicate tracking systems.
+
+---
+
+# 9. Future Compatibility (VERY IMPORTANT)
+
+Design this analytics layer so future systems can plug into it easily:
+
+Future systems include:
+
+* AI triage
+* predictive analytics
+* clinic benchmarking
+* multi-branch comparisons
+* emergency queue analytics
+* telemedicine metrics
+* radiology workflow metrics
+* supplier performance metrics
+
+This architecture must support future expansion WITHOUT rewrites.
+
+---
+
+# 10. Final Validation
+
+After implementation:
+
+Run full end-to-end tests for:
+
+* private clinics
+* government clinics
+* NGO/community clinics
+
+Verify:
+
+* clinic-type restrictions work
+* metrics calculate correctly
+* analytics update from real actions
+* activity logs integrate correctly
+* no existing functionality breaks
+
+Provide a final implementation summary including:
+
+* files changed
+* APIs added
+* metrics implemented
+* restrictions enforced
+* performance optimizations used
+* future scalability notes

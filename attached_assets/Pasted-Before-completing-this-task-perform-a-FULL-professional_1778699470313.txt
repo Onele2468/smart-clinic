@@ -1,0 +1,245 @@
+Before completing this task, perform a FULL professional system audit and end-to-end validation of the entire Smart Clinic platform.
+
+DO NOT stop at implementation only.
+
+You must:
+
+* thoroughly test the entire system
+* identify all errors
+* identify all broken workflows
+* identify frontend issues
+* identify backend issues
+* identify database issues
+* identify role permission issues
+* identify API failures
+* identify production risks
+* identify UI/UX inconsistencies
+* identify runtime crashes
+* identify React rendering issues
+* identify broken imports/components
+* identify console errors and warnings
+* identify performance bottlenecks
+* identify security vulnerabilities
+* identify accessibility issues
+* identify mobile-specific issues
+* identify deployment/build issues
+
+Then:
+
+* professionally fix ALL discovered issues
+* rerun all tests after fixes
+* confirm the fixes work correctly
+* ensure no regressions were introduced
+* ensure fixes do not break existing workflows
+* verify all routes/pages render correctly
+* verify all dashboards load without crashes
+* verify all forms submit successfully
+* verify all API integrations function correctly
+
+Test ALL roles professionally:
+
+* clinic_admin
+* receptionist
+* doctor
+* nurse
+* pharmacist
+* lab_technician
+* cashier
+* patient
+
+Verify role permissions professionally:
+
+* users only access authorized pages
+* unauthorized access is blocked
+* role escalation is impossible
+* clinic isolation is enforced
+* deactivated users cannot access protected routes
+* suspended users cannot perform actions
+* admins cannot accidentally remove themselves
+
+Verify:
+
+* registration
+* login
+* logout
+* forgot password
+* reset password
+* JWT auth
+* session persistence
+* protected routes
+* role redirects
+* clinic join flow
+* clinic onboarding
+* token expiration handling
+* invalid token handling
+* session timeout handling
+
+Verify email delivery works correctly for:
+
+* OTP
+* password reset
+* authentication flows
+* invitation emails
+* clinic onboarding emails
+
+Verify:
+
+* clinic creation
+* clinic code sharing
+* join clinic
+* role assignment
+* staff approval
+* staff activation/deactivation
+* staff suspension/reactivation
+* role switching
+* clinic isolation security
+* audit logging
+* activity tracking
+
+Verify:
+
+* patient registration
+* appointments
+* queue management
+* doctor assignment
+* nurse assignment
+* consultation workflow
+* prescriptions
+* pharmacy dispensing
+* laboratory requests
+* lab results
+* patient portal
+* clinic cards
+* billing
+* invoices
+* patient history visibility
+* consultation history
+* prescription traceability
+
+Verify:
+
+* private clinics show billing/cashier
+* government clinics hide billing
+* government clinic restrictions work correctly
+* role visibility changes correctly by clinic type
+* restricted modules are inaccessible through direct URLs
+
+Verify:
+
+* activate/deactivate staff
+* suspended staff access blocking
+* reactivation workflow
+* audit logs
+* historical records remain visible
+* soft delete logic works correctly
+* historical prescriptions remain traceable
+* historical consultations remain traceable
+
+Verify:
+
+* mobile responsiveness
+* tablet responsiveness
+* sidebar behavior
+* loading states
+* empty states
+* dropdowns
+* forms
+* role dashboards
+* navigation
+* error handling
+* notification toasts
+* modal dialogs
+* confirmation dialogs
+* search/filter functionality
+* pagination
+* dark/light theme consistency if applicable
+
+Verify frontend stability:
+
+* no blank pages
+* no infinite loading states
+* no hydration/rendering issues
+* no broken navigation
+* no missing assets
+* no console errors
+* no unhandled promise rejections
+* no React runtime crashes
+
+Verify backend stability:
+
+* all APIs return proper HTTP status codes
+* no HTML 500 responses
+* no undefined/null crashes
+* no unhandled exceptions
+* proper validation errors returned
+* secure authentication enforcement
+* secure authorization enforcement
+* rate limiting/security protections if implemented
+
+Verify database safety:
+
+* migrations succeeded safely
+* no production data corruption
+* DB relationships remain intact
+* foreign keys remain valid
+* soft delete logic works correctly
+* audit logs persist correctly
+* no orphaned records created
+
+Verify deployment/build readiness:
+
+* production build succeeds
+* no TypeScript/build errors
+* environment variables validated
+* deployment configuration verified
+* routes work correctly after deployment
+* assets load correctly in production
+* SSL/authentication flows work correctly on mobile and desktop
+
+Perform professional E2E workflow testing simulating real clinic usage:
+
+* receptionist registers patient
+* patient joins queue
+* doctor consultation workflow
+* nurse workflow
+* pharmacy workflow
+* laboratory workflow
+* cashier workflow
+* patient portal access
+* admin management workflow
+
+After ALL testing and fixes are complete:
+
+Provide a professional final audit report including:
+
+* all features tested
+* all bugs discovered
+* all bugs fixed
+* remaining known issues (if any)
+* APIs verified
+* database verified
+* frontend verified
+* backend verified
+* production readiness verification
+* deployment readiness verification
+* security validation
+* E2E testing results
+* performance observations
+* mobile responsiveness validation
+* role permission validation
+* audit log validation
+* migration validation
+* final production risk assessment
+
+IMPORTANT:
+Do not mark the task complete until the Smart Clinic system is:
+
+* stable
+* secure
+* production-safe
+* scalable
+* fully functional across all workflows and roles
+* free from critical runtime errors
+* free from broken routes/pages
+* professionally tested end-to-end
+* ready for production deployment.

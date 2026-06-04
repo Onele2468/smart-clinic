@@ -1,0 +1,376 @@
+========================================
+PHASE 6 — PRODUCTION POLISH, SECURITY, DEMO READINESS & FINALIZATION
+========================================
+
+IMPORTANT:
+This is the FINAL major phase before presentation/demo readiness.
+
+The system already includes:
+- Multi-tenant clinic architecture
+- Clinic types (private/government/NGO)
+- Billing and payments
+- Pharmacy and laboratory workflows
+- Inventory and supplier management
+- EMR and consultation workflows
+- Queue system
+- Patient portal
+- Role-based access
+- Shared backend/database architecture
+- OpenAPI/codegen architecture
+
+This phase is NOT about rebuilding core features.
+
+This phase is about:
+- production polish
+- security hardening
+- UX refinement
+- notifications
+- audit readiness
+- demo stability
+- final system integrity
+
+========================================
+PHASE 6 GOALS
+========================================
+
+1. SYSTEM NOTIFICATIONS
+2. AUDIT TRAILS & ACTIVITY HISTORY
+3. ADVANCED SEARCH & FILTERING
+4. DASHBOARD ANALYTICS
+5. FILE UPLOADS
+6. SECURITY HARDENING
+7. DEMO/PRESENTATION MODE
+8. PERFORMANCE OPTIMIZATION
+9. FINAL UI/UX POLISH
+10. PROFESSIONAL TESTING & VERIFICATION
+
+========================================
+1. SYSTEM NOTIFICATIONS
+========================================
+
+Create a centralized notification system.
+
+STAFF NOTIFICATIONS:
+- New patient check-in
+- New appointment booked
+- Lab request assigned
+- Prescription ready
+- Low inventory alerts
+- Expiring medication alerts
+- Payment completed
+- New join requests
+
+PATIENT NOTIFICATIONS:
+- Appointment reminders
+- Queue status updates
+- Prescription ready
+- Lab result available
+- Invoice/payment confirmation
+
+FEATURES:
+- Notification dropdown in navbar
+- Unread badge count
+- Mark as read
+- Notification history page
+- Real-time updates if possible
+- Toast notifications for important actions
+
+========================================
+2. AUDIT TRAILS & ACTIVITY HISTORY
+========================================
+
+Create enterprise-style audit logging.
+
+Track:
+- who performed action
+- clinic
+- module
+- timestamp
+- affected patient
+- before/after values where applicable
+
+AUDIT EVENTS:
+- Patient creation/update
+- Appointment changes
+- Prescription issuance
+- Lab result submission
+- Billing/payment actions
+- Inventory adjustments
+- Staff role changes
+- Login/logout
+- Settings changes
+
+Create:
+- audit_logs table
+- backend middleware/helpers
+- admin audit page with filtering
+
+FILTERS:
+- date
+- staff member
+- module
+- action type
+
+========================================
+3. ADVANCED SEARCH & FILTERING
+========================================
+
+Improve search experience system-wide.
+
+PATIENT SEARCH:
+Search by:
+- patient code
+- full name
+- phone
+- ID number
+- passport number
+- email
+
+APPOINTMENT SEARCH:
+- patient
+- doctor
+- status
+- date range
+
+BILLING SEARCH:
+- invoice number
+- patient
+- payment status
+- date range
+
+LAB SEARCH:
+- patient
+- status
+- urgency
+- category
+
+Add:
+- pagination
+- sorting
+- export-ready structures
+
+========================================
+4. DASHBOARD ANALYTICS
+========================================
+
+Create professional dashboard statistics.
+
+ADMIN DASHBOARD:
+- today appointments
+- active queue count
+- total patients
+- revenue today
+- monthly revenue
+- pending invoices
+- pending lab requests
+- low stock items
+
+DOCTOR DASHBOARD:
+- today's consultations
+- waiting patients
+- completed consultations
+- pending lab requests
+
+PHARMACY DASHBOARD:
+- pending prescriptions
+- dispensed today
+- low stock alerts
+
+LAB DASHBOARD:
+- pending tests
+- urgent tests
+- completed today
+
+PATIENT DASHBOARD:
+- upcoming appointments
+- active prescriptions
+- recent lab results
+- unpaid invoices
+
+Add:
+- charts
+- summary cards
+- trends
+- clean responsive layouts
+
+========================================
+5. FILE UPLOADS
+========================================
+
+Add secure file/document uploads.
+
+SUPPORT:
+- lab attachments
+- scanned documents
+- prescriptions
+- patient files
+- profile photos
+
+FEATURES:
+- upload validation
+- file type restrictions
+- secure storage
+- download/view support
+- attachment history
+
+IMPORTANT:
+Ensure uploads remain clinic-isolated in the multi-tenant system.
+
+========================================
+6. SECURITY HARDENING
+========================================
+
+Strengthen security professionally.
+
+ADD:
+- stricter route guards
+- server-side permission validation
+- clinic ownership validation
+- secure patient isolation
+- rate limiting where appropriate
+- stronger validation
+- duplicate prevention
+- safer error handling
+
+IDENTITY:
+- Ensure all users and patients use:
+  - ID number OR
+  - Passport number
+- Prevent duplicate identity records inside the same clinic where appropriate
+
+PATIENT PORTAL SECURITY:
+- Patients must ONLY access their own records
+- No clinic administration visibility
+- No staff/internal pages exposed
+- No cross-patient access possible
+
+========================================
+7. DEMO / PRESENTATION MODE
+========================================
+
+Create a professional presentation/demo mode.
+
+ADD:
+- seeded demo data
+- realistic patients
+- appointments
+- prescriptions
+- invoices
+- lab requests
+- consultations
+
+Create demo-ready accounts:
+- Admin
+- Doctor
+- Nurse
+- Pharmacist
+- Lab technician
+- Cashier
+- Patient
+
+Create:
+- demo quick-login cards/buttons
+OR
+- a demo credentials page
+
+IMPORTANT:
+Demo mode must:
+- look realistic
+- feel smooth
+- avoid empty screens
+
+========================================
+8. PERFORMANCE OPTIMIZATION
+========================================
+
+Optimize system responsiveness.
+
+ADD:
+- loading skeletons
+- empty states
+- optimistic updates where appropriate
+- query optimization
+- reduced unnecessary re-renders
+- proper caching
+- cleaner API loading states
+
+Ensure:
+- fast navigation
+- stable rendering
+- no UI flashing
+- no React warnings/errors
+
+========================================
+9. FINAL UI/UX POLISH
+========================================
+
+Improve the professional appearance.
+
+POLISH:
+- spacing consistency
+- typography consistency
+- responsive layouts
+- mobile responsiveness
+- better dialogs/modals
+- cleaner tables
+- professional badges
+- improved form UX
+- confirmation dialogs
+- success/error feedback
+
+PATIENT PORTAL:
+- Keep patient experience SIMPLE and SAFE
+- No complex clinic/staff features exposed
+- Friendly design
+- Clear navigation
+- Easy appointment/lab/payment viewing
+
+========================================
+10. PROFESSIONAL TESTING & FINAL VERIFICATION
+========================================
+
+THIS IS CRITICAL.
+
+Perform FULL PROFESSIONAL TESTING.
+
+REQUIRED:
+- backend typecheck
+- frontend typecheck
+- patient portal typecheck
+- route testing
+- auth testing
+- role testing
+- clinic isolation testing
+- billing permission testing
+- patient isolation testing
+- responsive testing
+- runtime testing
+- console log inspection
+- HMR verification
+- API verification
+
+VERIFY:
+- no broken routes
+- no runtime crashes
+- no invalid hooks
+- no infinite renders
+- no permission leaks
+- no cross-clinic leaks
+- no patient privacy leaks
+- no console errors
+
+FINAL STEP:
+Provide a complete implementation summary of:
+- what was built
+- what was improved
+- what was tested
+- what demo accounts exist
+- what workflows are ready for presentation
+
+IMPORTANT:
+Work professionally.
+Do NOT leave placeholder implementations.
+Do NOT skip testing.
+Do NOT break existing functionality.
+Preserve all existing workflows and architecture.
+Ensure the entire platform is presentation-ready and production-style stable.

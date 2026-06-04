@@ -1,0 +1,98 @@
+Phase 2 Step 5 — Complete Government Clinic Module Isolation
+
+The clinic-type architecture already exists and is working.
+
+IMPORTANT:
+Do NOT rewrite the queue system.
+Do NOT change database structures.
+Do NOT redesign navigation.
+Do NOT modify working role permissions.
+Do NOT touch onboarding logic.
+
+Goal:
+Fully connect the existing clinic-type feature flags across the entire UI and routing system.
+
+The existing `useClinicModules()` hook is already the single source of truth.
+
+Tasks:
+
+1. Sidebar Visibility
+- Hide modules unavailable for government clinics:
+  - Billing
+  - Pharmacy
+  - Laboratory
+  - Inventory
+  - Suppliers
+- Keep:
+  - Dashboard
+  - Live Queue
+  - Patients
+  - Appointments
+  - Staff
+  - Staff Availability
+  - Activity Logs
+  - Settings
+  - Notifications
+
+2. Admin Dashboard
+Hide cards/widgets that depend on disabled modules:
+- Revenue Today
+- Monthly Revenue
+- Pending Invoices
+- Active Prescriptions
+- Pending Lab Requests
+- Low Stock Items
+
+Government clinics should only see:
+- Patients
+- Queue
+- Appointments
+- Wait Time
+- Completed Today
+
+3. Route Protection
+Prevent direct URL access to disabled pages for government clinics.
+
+Example:
+- /billing
+- /pharmacy
+- /laboratory
+- /inventory
+- /suppliers
+
+If accessed directly:
+show a clean “Module Not Available” page.
+
+4. Queue Stage Filtering
+Government clinics should only see:
+- Waiting
+- Nurse Assessment
+- Doctor Consultation
+- Completed
+
+Remove:
+- Pharmacy
+- Laboratory
+
+5. Staff Role Restrictions
+Government clinics must not allow:
+- Cashier
+- Pharmacist
+- Lab Technician
+
+6. API Safety
+Add server-side guards so disabled modules cannot be accessed even if a user manually calls APIs.
+
+7. Important Constraints
+- Preserve all functionality for private clinics.
+- Preserve all functionality for NGO clinics.
+- Do not break existing queues.
+- Do not rename database fields.
+- Reuse existing feature flags and clinic-type logic.
+- Keep changes modular and minimal.
+
+After implementation:
+- run typecheck
+- run route tests
+- test private clinic unchanged
+- test government clinic hidden modules

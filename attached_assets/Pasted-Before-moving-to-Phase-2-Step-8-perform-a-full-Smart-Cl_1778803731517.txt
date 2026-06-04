@@ -1,0 +1,147 @@
+Before moving to Phase 2 Step 8, perform a full Smart Clinic system refresh, stabilization, validation, and synchronization pass.
+
+IMPORTANT:
+Do NOT redesign the application.
+Do NOT introduce new modules.
+Do NOT modify stable workflows unnecessarily.
+This is a stabilization and production-readiness refresh only.
+
+OBJECTIVE:
+Ensure the entire Smart Clinic platform is synchronized, stable, optimized, and ready for full end-to-end operational testing before implementing the intelligence layer.
+
+==================================================
+SYSTEM STABILIZATION TASKS
+==========================
+
+1. FRONTEND VALIDATION
+
+* Verify all dashboards render correctly
+* Verify all queue pages load correctly
+* Verify all clinic-type module visibility works
+* Verify responsive layouts
+* Verify role-based navigation visibility
+* Verify loading states and error states
+* Verify no broken routes
+* Verify no hydration/render issues
+
+2. BACKEND VALIDATION
+
+* Verify all APIs respond correctly
+* Verify clinic-type guards work server-side
+* Verify role permissions work correctly
+* Verify queue transitions are stable
+* Verify analytics APIs return correct data
+* Verify activity log writes complete successfully
+
+3. DATABASE VALIDATION
+
+* Verify relationships remain intact
+* Verify no orphaned queue records
+* Verify no invalid clinic-type data
+* Verify no invalid role assignments
+* Verify analytics queries are optimized
+* Verify timestamps are stored correctly
+
+4. QUEUE SYSTEM VALIDATION
+   Verify:
+
+* reception queue
+* nurse queue
+* doctor queue
+* laboratory queue
+* pharmacy queue
+* cashier queue
+* patient queue
+
+Ensure:
+
+* transitions work correctly
+* timestamps update correctly
+* queue analytics update correctly
+* role visibility remains isolated
+
+5. CLINIC TYPE VALIDATION
+
+PRIVATE CLINICS:
+
+* billing enabled
+* invoices enabled
+* cashier enabled
+* pharmacy enabled
+* laboratory enabled
+* analytics visible
+
+GOVERNMENT CLINICS:
+
+* billing hidden
+* invoices hidden
+* cashier disabled
+* restricted modules blocked
+* analytics restricted correctly
+
+NGO CLINICS:
+
+* configurable modules verified
+* billing configuration verified
+* optional services verified
+
+6. ANALYTICS VALIDATION
+   Verify:
+
+* metrics update from real actions
+* charts display correctly
+* queue metrics calculate correctly
+* staff metrics calculate correctly
+* clinic performance metrics work
+* government clinic restrictions apply correctly
+
+7. ACTIVITY LOG VALIDATION
+   Verify:
+
+* logs record properly
+* timestamps are correct
+* role tracking works
+* module tracking works
+* actions are categorized correctly
+
+8. PERFORMANCE & CLEANUP
+
+* remove temporary debug code
+* remove duplicate queries
+* optimize polling intervals
+* verify no console errors
+* verify no TypeScript errors
+* verify no runtime crashes
+* verify memory-safe rendering
+
+9. FINAL SYNCHRONIZATION
+
+* regenerate types if needed
+* restart services
+* verify frontend/backend synchronization
+* verify route protection
+* verify feature flags consistency
+
+==================================================
+FINAL REQUIREMENTS
+==================
+
+After stabilization:
+
+* run full typecheck
+* run full route validation
+* verify analytics rendering
+* verify queue synchronization
+* verify module guards
+* verify API protections
+* verify clinic-type restrictions
+
+Then provide:
+
+* final stabilization summary
+* remaining warnings (if any)
+* production readiness status
+* deployment readiness confirmation
+
+IMPORTANT:
+This task is ONLY for stabilization, synchronization, and production-readiness refresh before full manual QA testing and Step 8 implementation.

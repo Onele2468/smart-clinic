@@ -1,0 +1,507 @@
+We are building a professional multi-role Clinic Management System with a separate future Patient App. The current system already includes dashboards, live queue management, patients, appointments, staff management, notifications, activity logs, and clinic settings.
+
+The goal now is to restructure and improve the system professionally in phases.
+
+OBJECTIVE:
+Separate staff users from patient users and create a professional clinic architecture.
+
+CURRENT PROBLEM:
+Patients and staff users are mixed together in the same onboarding flow. This causes patients to appear inside the Staff & Members page, which is incorrect.
+
+GOAL:
+Separate the system into:
+
+1. Staff Management App (current system)
+2. Patient App (future frontend)
+
+Both applications must share:
+
+* the same backend
+* the same database
+* the same API
+* the same clinic data
+
+---
+
+## STEP 1 — CREATE USER TYPE SYSTEM
+
+Add a `user_type` field to the users table.
+
+Allowed values:
+
+* staff
+* patient
+
+Staff users must also have role values:
+
+* clinic_admin
+* doctor
+* nurse
+* receptionist
+
+Patients must NOT have staff roles.
+
+---
+
+## STEP 2 — CREATE PROFESSIONAL INTERNAL IDS
+
+Generate automatic internal IDs for all entities.
+
+Examples:
+
+Doctors:
+DR-001
+DR-002
+
+Nurses:
+NR-001
+NR-002
+
+Receptionists:
+RC-001
+
+Patients:
+PT-00001
+PT-00002
+
+Appointments:
+AP-00001
+
+Prescriptions:
+PR-00001
+
+Lab Requests:
+LB-00001
+
+These internal IDs must be separate from government identification numbers.
+
+---
+
+## STEP 3 — ADD GOVERNMENT IDENTIFICATION
+
+All users joining the clinic system must provide either:
+
+* South African ID number
+  OR
+* Passport number
+
+Add fields:
+
+* government_id_type
+* government_id_number
+
+Examples:
+
+government_id_type = "SA_ID"
+government_id_number = "09070843561325"
+
+OR
+
+government_id_type = "PASSPORT"
+government_id_number = "A12345678"
+
+Validation rules:
+
+* SA ID must contain exactly 13 digits
+* Passport numbers may contain letters and numbers
+
+Prevent duplicate registrations using government ID numbers.
+
+---
+
+## STEP 4 — FIX AUTHENTICATION FLOW
+
+CURRENT ISSUE:
+All new accounts automatically become clinic members/staff.
+
+FIX:
+
+### STAFF REGISTRATION FLOW
+
+* create account
+* choose role
+* enter clinic code
+* submit ID/passport
+* request approval
+* admin approves access
+
+System must create:
+
+user_type = 'staff'
+
+### PATIENT REGISTRATION FLOW
+
+* create patient account
+* no clinic code required
+* submit ID/passport
+* patient profile created
+
+System must create:
+
+user_type = 'patient'
+
+Patients must NEVER appear in clinic staff/member pages.
+
+---
+
+## STEP 5 — FIX STAFF & MEMBERS PAGE
+
+Update Staff page query to only fetch users where:
+
+user_type = 'staff'
+
+Do NOT display patients inside clinic staff/member lists.
+
+---
+
+## STEP 6 — CONNECT PATIENTS TO CLINICS
+
+Each patient should belong to a clinic.
+
+Clinic admins should only see:
+
+* their own clinic patients
+* their own appointments
+* their own queue
+* their own staff
+
+This creates proper multi-clinic SaaS architecture.
+
+OBJECTIVE:
+Fix appointment booking and create a professional scheduling workflow.
+
+---
+
+## STEP 1 — FIX APPOINTMENT BOOKING SYSTEM
+
+CURRENT ISSUE:
+Appointment booking throws HTTP 500 Internal Server Error.
+
+LIKELY ISSUE:
+The form expects internal patient IDs but users manually type South African ID numbers.
+
+FIX BOOKING FLOW:
+
+* remove manual patient ID input
+* add searchable patient dropdown
+* receptionist selects patient by name
+* system automatically uses internal patient_id
+
+Example:
+
+Search Patient:
+[Palesa Shoni]
+
+Internally:
+
+patient_id = PT-00002
+
+---
+
+## STEP 2 — FIX APPOINTMENTS DATABASE INSERT
+
+Check appointments table schema.
+
+Ensure backend correctly inserts:
+
+* clinic_id
+* patient_id
+* doctor_id
+* scheduled_at
+* appointment_type
+* status
+
+Check:
+
+* foreign keys
+* patient references
+* doctor references
+* clinic references
+* validation rules
+
+Add proper backend validation and professional error handling.
+
+---
+
+## STEP 3 — ADD APPOINTMENT STATUS SYSTEM
+
+Add statuses:
+
+* Scheduled
+* Checked In
+* Waiting
+* Nurse Assessment
+* In Consultation
+* Completed
+* Cancelled
+* No-show
+
+---
+
+## STEP 4 — APPOINTMENTS PAGE IMPROVEMENTS
+
+Add:
+
+* appointment cards/table
+* doctor filtering
+* date filtering
+* appointment status badges
+* upcoming appointments
+* completed appointments
+
+OBJECTIVE:
+Create complete patient medical records.
+
+---
+
+## STEP 1 — PATIENT PROFILE IMPROVEMENTS
+
+Add:
+
+* medical history
+* allergies
+* chronic conditions
+* previous visits
+* consultation timeline
+* uploaded files/documents
+* emergency contacts
+* medical aid information
+
+---
+
+## STEP 2 — CONSULTATION NOTES
+
+Doctors and nurses should be able to add:
+
+* diagnosis
+* symptoms
+* observations
+* treatment plans
+* follow-up instructions
+
+All consultation notes should appear in chronological order.
+
+OBJECTIVE:
+Improve real-time patient flow.
+
+Current queue stages:
+
+* Waiting
+* Nurse Assessment
+* Doctor Consultation
+* Completed
+* Skipped / No-show
+
+---
+
+## STEP 1 — ADD REAL-TIME UPDATES
+
+Implement:
+
+* live queue refresh
+* automatic status updates
+* notifications
+* queue movement tracking
+
+---
+
+## STEP 2 — ADD ADVANCED QUEUE FEATURES
+
+Add:
+
+* patient priority
+* emergency tags
+* estimated waiting times
+* drag-and-drop queue movement
+
+OBJECTIVE:
+Allow doctors to prescribe medicine professionally.
+
+---
+
+## STEP 1 — PRESCRIPTION SYSTEM
+
+Doctors must be able to create prescriptions containing:
+
+* medicine name
+* dosage
+* instructions
+* frequency
+* duration
+* notes
+
+Example:
+
+Paracetamol 500mg
+Take 1 tablet after meals
+3 times daily for 5 days
+
+---
+
+## STEP 2 — PHARMACY DASHBOARD
+
+Add:
+
+* active prescriptions
+* dispensed medication
+* prescription history
+* medicine inventory preparation
+
+---
+
+## STEP 3 — PATIENT ACCESS
+
+Patients should later see prescriptions in their patient app.
+
+OBJECTIVE:
+Support medical testing workflows.
+
+---
+
+## STEP 1 — LAB REQUESTS
+
+Doctors must be able to request:
+
+* blood tests
+* urine tests
+* X-rays
+* scans
+* diagnostics
+
+---
+
+## STEP 2 — LAB RESULTS
+
+Allow:
+
+* result uploads
+* attachments
+* result status tracking
+* doctor review
+
+OBJECTIVE:
+Create a separate patient-facing application.
+
+IMPORTANT:
+This must be a separate frontend application but use the SAME backend, database, API, and clinic data as the clinic staff system.
+
+Do NOT mix patient UI with the staff dashboard.
+
+---
+
+## PATIENT APP FEATURES
+
+Patients should be able to:
+
+* register/login
+* book appointments
+* view appointment history
+* track queue status
+* receive notifications
+* view prescriptions
+* view lab results
+* view medical history
+
+Patients must NOT access:
+
+* admin dashboard
+* staff pages
+* activity logs
+* clinic settings
+
+OBJECTIVE:
+Support multiple clinics professionally.
+
+Each clinic must only access:
+
+* its own patients
+* its own staff
+* its own appointments
+* its own queue
+* its own reports
+
+Example:
+
+Pretoria Clinic only sees Pretoria Clinic data.
+
+Johannesburg Clinic only sees Johannesburg Clinic data.
+
+OBJECTIVE:
+Implement proper role-based access control.
+
+---
+
+## ROLE ACCESS RULES
+
+### Clinic Admin
+
+* full access
+
+### Doctor
+
+* consultations
+* prescriptions
+* lab requests
+* appointments
+
+### Nurse
+
+* vitals
+* queue updates
+* nurse assessments
+
+### Receptionist
+
+* patient registration
+* appointment booking
+* queue management
+
+### Patient
+
+* own records only
+
+Prepare the system for:
+
+* real-time queue updates
+* mobile patient app
+* notifications
+* prescriptions
+* consultation history
+* file uploads
+* analytics
+* doctor schedules
+
+Maintain the current professional UI design system and dashboard layout because the application already looks professional and organized.
+
+The application already has:
+
+* strong dashboard design
+* queue workflow
+* notifications
+* activity logs
+* staff onboarding
+* patient management
+
+Focus on:
+
+* fixing architecture
+* improving scalability
+* separating patient and staff systems properly
+* preparing for a real SaaS healthcare platform
+
+IMPORTANT FINAL TASK:
+
+After all implementation is completed:
+
+* professionally test the entire system
+* verify all authentication flows
+* verify appointment booking
+* verify queue updates
+* verify role permissions
+* verify patient/staff separation
+* verify database inserts and queries
+* verify clinic isolation
+* verify frontend/backend integration
+* ensure there are no HTTP 500 errors
+* ensure all pages and workflows function correctly
+* ensure the system is production-ready and stable

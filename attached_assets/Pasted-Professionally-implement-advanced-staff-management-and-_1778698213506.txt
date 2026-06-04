@@ -1,0 +1,275 @@
+Professionally implement advanced staff management and secure staff deactivation workflows in the Smart Clinic system WITHOUT breaking any existing functionality.
+
+IMPORTANT:
+The Smart Clinic system is already operational in production with:
+
+* multi-role authentication
+* clinic onboarding
+* patient portal
+* queue management
+* billing
+* pharmacy
+* laboratory
+* staff availability
+* doctor/nurse assignment
+* forgot password
+* email authentication
+* government/private clinic logic
+
+DO NOT break, remove, regress, or destabilize any existing working systems.
+
+==================================================
+
+1. ADVANCED STAFF MANAGEMENT
+   ==================================================
+
+Enhance the Clinic Admin staff management system professionally.
+
+Clinic Admin must be able to:
+
+* Add staff
+* Invite staff
+* Approve staff requests
+* Edit staff information
+* Change staff roles
+* Activate staff
+* Deactivate staff
+* Remove staff from clinic access
+
+Supported staff roles:
+
+* clinic_admin
+* receptionist
+* doctor
+* nurse
+* pharmacist
+* lab_technician
+* cashier
+
+==================================================
+2. SAFE STAFF REMOVAL (SOFT DELETE)
+===================================
+
+IMPORTANT:
+Healthcare systems must NEVER permanently erase staff history.
+
+Implement professional SOFT DEACTIVATION instead of hard deletion.
+
+When a staff member is removed:
+
+* account must NOT be permanently deleted
+* historical records must remain intact
+* prescriptions remain traceable
+* consultations remain traceable
+* audit history remains traceable
+* queue history remains traceable
+
+Instead:
+
+* membership becomes inactive
+* clinic access is revoked
+* login access to that clinic is blocked
+* status becomes:
+
+  * active
+  * inactive
+  * suspended
+
+Historical medical records must still display:
+
+* doctor name
+* nurse name
+* pharmacist name
+  even after deactivation.
+
+==================================================
+3. STAFF ACCESS CONTROL
+=======================
+
+Ensure deactivated staff:
+
+* cannot log into clinic dashboards
+* cannot access clinic data
+* cannot create appointments
+* cannot modify patient data
+* cannot access queues
+
+But:
+
+* their previous records remain visible historically.
+
+==================================================
+4. ADMIN STAFF ACTIONS
+======================
+
+Add professional admin actions:
+
+* Activate
+* Deactivate
+* Suspend
+* Change role
+* Reset password
+* View activity
+* Remove from clinic
+
+Use confirmation dialogs for destructive actions.
+
+Example:
+"Are you sure you want to deactivate Dr Benneth?"
+
+==================================================
+5. STAFF STATUS & VISIBILITY
+============================
+
+In staff management page display:
+
+* Active
+* Inactive
+* Suspended
+* Last login
+* Role
+* Availability status
+* Joined date
+
+Use professional healthcare dashboard UI.
+
+==================================================
+6. AUDIT LOGGING
+================
+
+Create professional audit logging.
+
+Track:
+
+* who deactivated staff
+* who changed roles
+* who reset passwords
+* date/time of actions
+* clinic affected
+
+Example:
+
+* Deactivated by: Dora Mokoena
+* Date: 2026-05-13
+* Reason: Left clinic
+
+Audit logs must be immutable/read-only.
+
+==================================================
+7. SECURITY & ROLE VALIDATION
+=============================
+
+Ensure:
+
+* only clinic_admin can manage staff
+* staff cannot promote themselves
+* staff cannot deactivate admins
+* admins cannot accidentally remove themselves
+* role escalation is blocked
+* cross-clinic access is blocked
+
+==================================================
+8. DATABASE SAFETY
+==================
+
+Safely update schemas and migrations.
+
+DO NOT destroy production data.
+
+Use:
+
+* soft delete patterns
+* status fields
+* audit relationships
+* safe migration strategy
+
+==================================================
+9. UI/UX IMPROVEMENTS
+=====================
+
+Professionally improve:
+
+* staff management page
+* action dropdowns
+* status badges
+* audit log display
+* confirmation dialogs
+* mobile responsiveness
+* loading states
+* empty states
+* filtering/search
+
+Use clean professional healthcare UI/UX.
+
+==================================================
+10. COMPLETE PROFESSIONAL SYSTEM TESTING
+========================================
+
+After implementation:
+Run FULL professional E2E testing across the ENTIRE Smart Clinic platform.
+
+Test ALL roles:
+
+* clinic_admin
+* receptionist
+* doctor
+* nurse
+* pharmacist
+* lab_technician
+* cashier
+* patient
+
+Test ALL major systems:
+
+* registration
+* login
+* forgot password
+* reset password
+* email delivery
+* clinic onboarding
+* join clinic
+* role permissions
+* dashboards
+* queue management
+* appointments
+* patient portal
+* prescriptions
+* pharmacy
+* laboratory
+* billing
+* government clinic restrictions
+* private clinic billing
+* staff availability
+* doctor assignment
+* patient clinic cards
+* audit logs
+* deactivated staff access blocking
+
+==================================================
+11. FINAL VALIDATION
+====================
+
+After all testing:
+Provide a complete professional audit report including:
+
+* files modified
+* migrations applied
+* APIs tested
+* frontend validation
+* backend validation
+* role validation
+* database validation
+* production readiness
+* security validation
+* E2E test results
+* remaining risks/issues (if any)
+
+Ensure the Smart Clinic system remains:
+
+* stable
+* production-safe
+* scalable
+* secure
+* healthcare-compliant
+* professionally structured
+* fully functional across all workflows.

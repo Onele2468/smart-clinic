@@ -1,0 +1,115 @@
+========================================
+EMAIL OTP VERIFICATION SYSTEM
+========================================
+
+Implement a simple and professional email OTP verification system for the Smart Clinic platform.
+
+IMPORTANT:
+- Do NOT rebuild authentication
+- Extend the existing auth system cleanly
+- Use the SAME backend and database
+- Preserve all existing login/register functionality
+
+========================================
+FEATURES
+========================================
+
+During registration:
+
+1. User enters:
+- email
+- password
+- account details
+
+2. System generates OTP code
+
+3. OTP is sent to user's email
+
+4. User enters OTP code
+
+5. Account becomes verified
+
+Support:
+- staff accounts
+- patient accounts
+
+========================================
+EMAIL PROVIDER
+========================================
+
+Use:
+- Resend
+
+Create clean email templates for:
+- OTP verification
+- welcome email (optional)
+
+========================================
+OTP REQUIREMENTS
+========================================
+
+- 6-digit OTP
+- expiration time
+- resend OTP button
+- secure validation
+- prevent brute force attempts
+- proper error handling
+
+========================================
+DATABASE
+========================================
+
+Add fields where necessary:
+- emailVerified
+- otpCode
+- otpExpiresAt
+
+========================================
+FRONTEND
+========================================
+
+Create:
+- OTP verification screen/modal
+- resend OTP functionality
+- loading states
+- success/error states
+
+UI should feel:
+- modern
+- professional
+- simple
+- mobile responsive
+
+========================================
+SECURITY
+========================================
+
+- Hash/store OTP securely if appropriate
+- Expire OTP properly
+- Prevent duplicate verification
+- Prevent bypassing verification
+
+========================================
+TESTING
+========================================
+
+Professionally test:
+- OTP sending
+- OTP verification
+- invalid OTP handling
+- expired OTP handling
+- resend OTP flow
+- registration flow
+- patient registration
+- staff registration
+
+Verify:
+- emails are delivered successfully
+- no runtime errors
+- no auth regressions
+- frontend/backend remain stable
+
+Provide final setup instructions for:
+- Resend API key
+- environment variables
+- deployment configuration
