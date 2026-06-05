@@ -1,6 +1,6 @@
 /**
  * Runtime configuration flags.
- * Set PRESENTATION_MODE=true in Replit Secrets/env vars to bypass email
+ * Set PRESENTATION_MODE=true in environment variables to bypass email.
  * verification during demos and presentations. All other security (JWT,
  * passwords, roles, rate limiting, multi-tenancy) remains fully enforced.
  */

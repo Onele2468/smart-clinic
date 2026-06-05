@@ -1,5 +1,5 @@
 -- Per-clinic operational alert settings for WhatsApp clinic-management notifications.
--- Prefer: pnpm exec drizzle-kit migrate --config lib/db/drizzle.config.ts
+-- Prefer: npm exec drizzle-kit migrate --config lib/db/drizzle.config.ts
 -- (applies drizzle/0001_operational_alerts_config.sql)
 -- Manual fallback: run this script against your Postgres database.
 

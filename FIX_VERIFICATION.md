@@ -107,7 +107,7 @@ Proceed to clinic creation ✓
 ### ✅ Test 1: Normal Clinic Creation (Existing User)
 **Scenario**: User registered properly, token valid, user in DB
 **Steps**:
-1. Register via `/auth/register` or `/patient-portal/register`
+1. Register via `/auth/register`
 2. Get JWT token from login
 3. POST to `/api/clinics` with valid clinic data
 4. Expected: 201 Created with clinic object ✓

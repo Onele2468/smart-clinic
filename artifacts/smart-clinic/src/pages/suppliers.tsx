@@ -18,7 +18,7 @@ import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Truck, Plus, Phone, Mail, User, Trash2 } from "lucide-react";
 
-const BASE = "http://localhost:3000";
+const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 const apiFetch = async (path: string, opts?: RequestInit) => {
   const response = await fetch(`${BASE}/api${path}`, {
     ...opts,

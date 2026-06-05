@@ -255,7 +255,6 @@ router.post("/some-endpoint", ensureUserSyncedAuth as any, async (req, res) => {
 - ✅ Any route that creates records with `userId` FK
 - ✅ Routes creating clinic_members, appointments, etc.
 - ❌ NOT needed for read-only routes
-- ❌ NOT needed for routes using patient portal
 
 ---
 

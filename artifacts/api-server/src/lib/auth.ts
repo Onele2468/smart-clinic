@@ -367,7 +367,7 @@ export async function requireClinicMember(
     res.status(403).json({ error: "Not a member of this clinic" });
     return;
   }
-  // Patients must use the patient portal — block them from all staff routes
+  // Patient accounts are blocked from staff-only clinic routes.
   if (req.user?.userType === "patient") {
     res.status(403).json({ error: "Access restricted to staff accounts only" });
     return;
@@ -379,7 +379,7 @@ export async function requireClinicMember(
 /**
  * Middleware that ensures the authenticated user is a patient (userType === 'patient').
  * Must be used after requireAuth. Returns 403 for staff users attempting to access
- * patient-portal-only endpoints.
+ * patient-only endpoints.
  */
 export function requirePatientUser(
   req: Request & { user?: { userId: string; role: string; userType: string } },

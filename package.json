@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "dev": "npm run dev -w @workspace/api-server",
+    "build": "npm run typecheck && npm run build --workspaces --if-present",
+    "start": "npm run start -w @workspace/api-server",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present"
   },
   "private": true,
   "devDependencies": {
@@ -18,7 +20,17 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "drizzle-kit": "^0.31.10",
-    "drizzle-orm": "catalog:"
-  }
+    "drizzle-kit": "0.31.9",
+    "drizzle-orm": "^0.45.2"
+  },
+  "workspaces": [
+    "artifacts/api-server",
+    "artifacts/smart-clinic",
+    "artifacts/mockup-sandbox",
+    "lib/api-client-react",
+    "lib/api-spec",
+    "lib/api-zod",
+    "lib/db",
+    "scripts"
+  ]
 }

@@ -1,5 +1,5 @@
 /**
- * Email service — Resend via RESEND_API_KEY secret (Replit Secrets).
+ * Email service via RESEND_API_KEY.
  * Falls back gracefully when not configured: OTP is logged to console for dev.
  */
 import { Resend } from "resend";

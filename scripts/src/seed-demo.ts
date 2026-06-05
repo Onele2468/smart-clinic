@@ -1,6 +1,6 @@
 /**
  * Demo seed script for Smart Clinic
- * Run with: pnpm --filter @workspace/scripts run seed-demo
+ * Run with: npm run seed-demo -w @workspace/scripts
  *
  * Creates a full demo clinic with realistic data for presentation.
  * Demo credentials: password is Demo@1234 for all accounts.
@@ -123,8 +123,7 @@ async function main() {
       status: "active",
     });
   }
-
-  // ── 3. Create demo patient user (patient portal) ───────────────────────────
+  // Create demo patient user linked to a clinical patient record.
   console.log("Creating demo patient account...");
   await db.delete(usersTable).where(eq(usersTable.email, "patient@democlinic.com"));
   const [patientUser] = await db.insert(usersTable).values({
@@ -471,8 +470,6 @@ async function main() {
   console.log("  lab@democlinic.com          → Lab Technician");
   console.log("  cashier@democlinic.com      → Cashier");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("  PATIENT PORTAL (/patient-portal):");
-  console.log("  patient@democlinic.com      → Zanele Sithole");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   process.exit(0);

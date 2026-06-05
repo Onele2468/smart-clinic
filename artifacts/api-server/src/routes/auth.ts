@@ -390,8 +390,7 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
         expiresAt,
       });
 
-      const domains = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
-      const baseUrl = domains ? `https://${domains}` : "http://localhost:5173";
+      const baseUrl = process.env.PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:5173";
       const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
       await sendPasswordResetEmail(user.email, user.name, resetUrl);

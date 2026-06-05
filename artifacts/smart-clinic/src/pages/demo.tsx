@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLogin } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, User, Stethoscope, UserCog, ClipboardList, Pill, FlaskConical, Receipt, Loader2, ChevronRight } from "lucide-react";
+import { Activity, Stethoscope, UserCog, ClipboardList, Pill, FlaskConical, Receipt, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -100,7 +100,7 @@ export default function DemoPage() {
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "Demo data may not be seeded. Run: pnpm --filter @workspace/scripts run seed-demo",
+        description: "Demo data may not be seeded. Run: npm run seed-demo -w @workspace/scripts",
       });
     } finally {
       setLoggingIn(null);
@@ -196,23 +196,6 @@ export default function DemoPage() {
             );
           })}
         </div>
-
-        {/* Patient portal link */}
-        <div className="mt-8 p-5 rounded-xl bg-background border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <User className="w-5 h-5 text-emerald-700" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm">Patient Portal</p>
-              <p className="text-xs text-muted-foreground">Log in as Zanele Sithole to see the patient experience — appointments, prescriptions, lab results, and invoices.</p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => window.open("/patient-portal/demo", "_blank")}>
-            Open Patient Portal →
-          </Button>
-        </div>
-
         <p className="text-center text-xs text-muted-foreground mt-8">
           This is a demonstration environment. All data is fictional and for presentation purposes only.
         </p>

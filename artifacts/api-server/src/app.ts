@@ -1,4 +1,3 @@
-import "dotenv/config";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -9,7 +8,7 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
-// Trust the Replit reverse proxy so express-rate-limit sees real IPs from X-Forwarded-For
+// Trust one upstream proxy so express-rate-limit can use forwarded client IPs.
 app.set("trust proxy", 1);
 
 app.use(
@@ -75,10 +74,6 @@ app.use("/api/auth/verify-email", authRateLimit);
 app.use("/api/auth/resend-otp", authRateLimit);
 app.use("/api/auth/forgot-password", authRateLimit);
 app.use("/api/auth/reset-password", authRateLimit);
-app.use("/api/patient-portal/register", authRateLimit);
-app.use("/api/patient-portal/verify-email", authRateLimit);
-app.use("/api/patient-portal/resend-otp", authRateLimit);
-
 app.use("/api", router);
 
 // 404 — route not matched; must return JSON, never HTML

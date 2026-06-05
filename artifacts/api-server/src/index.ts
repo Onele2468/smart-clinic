@@ -1,12 +1,13 @@
+import "./lib/load-env";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 
-const rawPort = process.env["PORT"];
+const rawPort = process.env["API_PORT"] ?? process.env["PORT"];
 
 if (!rawPort) {
   throw new Error(
-    "PORT environment variable is required but was not provided.",
+    "API_PORT or PORT environment variable is required but was not provided.",
   );
 }
 
