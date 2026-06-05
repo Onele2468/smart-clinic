@@ -1,8 +1,8 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import type { IncomingMessage, ServerResponse } from "http";
-import { pinoHttp } from "pino-http";
-import { rateLimit } from "express-rate-limit";
+import pinoHttp from "pino-http";
+import rateLimit from "express-rate-limit";
 import router from "./routes";
 import whatsappWebhookRouter from "./routes/whatsapp_webhook";
 import { logger } from "./lib/logger";
