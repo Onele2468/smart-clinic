@@ -27,16 +27,17 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.3.3",
-    "@types/nodemailer": "^8.0.0",
-    "esbuild": "0.25.8",
-    "esbuild-plugin-pino": "^2.3.3",
-    "pino-pretty": "^13",
-    "thread-stream": "3.1.0"
+  "@types/bcrypt": "^6.0.0",
+  "@types/cookie-parser": "^1.4.10",
+  "@types/cors": "^2.8.19",
+  "@types/express": "^5.0.6",
+  "@types/jsonwebtoken": "^9.0.10",
+  "@types/node": "^25.3.3",
+  "@types/nodemailer": "^8.0.0",
+  "esbuild": "0.25.8",
+  "esbuild-plugin-pino": "^2.3.3",
+  "pino-pretty": "^13",
+  "thread-stream": "3.1.0",
+  "typescript": "^5.9.3"
   }
 }
