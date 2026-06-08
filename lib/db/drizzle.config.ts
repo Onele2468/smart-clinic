@@ -17,7 +17,7 @@ function getDbUrl(): string {
 }
 
 export default defineConfig({
-  schema: "C:/Users/Fctec/Desktop/Health-Nexus/Health-Nexus/lib/db/src/schema/**/*.ts",
+  schema: path.resolve(import.meta.dirname, "src/schema/**/*.ts"),
   dialect: "postgresql",
   dbCredentials: {
     url: getDbUrl(),

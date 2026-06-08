@@ -1,11 +1,16 @@
+import { createRequire } from "node:module";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import type { IncomingMessage, ServerResponse } from "http";
-import pinoHttp from "pino-http";
-import rateLimit from "express-rate-limit";
+import type { pinoHttp as pinoHttpFactory } from "pino-http";
+import type { rateLimit as rateLimitFactory } from "express-rate-limit";
 import router from "./routes";
 import whatsappWebhookRouter from "./routes/whatsapp_webhook";
 import { logger } from "./lib/logger";
+
+const nodeRequire = createRequire(import.meta.url);
+const pinoHttp = nodeRequire("pino-http") as typeof pinoHttpFactory;
+const rateLimit = nodeRequire("express-rate-limit") as typeof rateLimitFactory;
 
 const app: Express = express();
 

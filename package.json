@@ -1,33 +1,28 @@
 {
-  "name": "workspace",
+  "name": "smart-clinic-platform",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
     "dev": "npm run dev -w @workspace/api-server",
-    "build": "npm run typecheck && npm run build --workspaces --if-present",
+    "dev:frontend": "npm run dev -w @workspace/smart-clinic",
+    "build": "npm run typecheck && npm run build -w @workspace/api-server && npm run build -w @workspace/smart-clinic",
     "start": "npm run start -w @workspace/api-server",
     "typecheck:libs": "tsc --build",
-    "typecheck": "npm run typecheck:libs && npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck:libs && npm run typecheck -w @workspace/api-server && npm run typecheck -w @workspace/smart-clinic",
+    "db:push": "npm run push -w @workspace/db",
+    "db:push-force": "npm run push-force -w @workspace/db"
   },
   "private": true,
   "devDependencies": {
-    "pg": "^8.21.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   },
-  "dependencies": {
-    "dotenv": "^17.4.2",
-    "drizzle-kit": "0.31.9",
-    "drizzle-orm": "^0.45.2"
-  },
+  "dependencies": {},
   "workspaces": [
     "artifacts/api-server",
     "artifacts/smart-clinic",
-    "artifacts/mockup-sandbox",
     "lib/api-client-react",
-    "lib/api-spec",
     "lib/api-zod",
-    "lib/db",
-    "scripts"
+    "lib/db"
   ]
 }

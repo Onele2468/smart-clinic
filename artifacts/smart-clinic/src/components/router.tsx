@@ -14,7 +14,6 @@ import ResetPassword from "@/pages/reset-password";
 import OnboardingIndex from "@/pages/onboarding/index";
 import CreateClinic from "@/pages/onboarding/create-clinic";
 import JoinClinic from "@/pages/onboarding/join-clinic";
-import Demo from "@/pages/demo";
 import Dashboard from "@/pages/dashboard";
 import Queue from "@/pages/queue";
 import Patients from "@/pages/patients/index";
@@ -184,9 +183,6 @@ export function AppRouter() {
 
   return (
     <Switch>
-      {/* Demo Mode */}
-      <Route path="/demo" component={Demo} />
-
       {/* Auth Routes */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
