@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import { logger } from "../lib/logger";
 import { updateDeliveryStatusByMetaId } from "../services/whatsapp/whatsapp.delivery";
+import { processIncomingWhatsAppMessage } from "../services/whatsapp/whatsapp.incoming";
 
 const router: IRouter = Router();
 
@@ -59,9 +60,15 @@ router.post(
     }
 
     const entry = (payload as { entry?: unknown[] })?.entry?.[0] as
-      | { changes?: { value?: { statuses?: unknown[] } }[] }
-      | undefined;
+    | {
+        changes?: { value?: { statuses?: unknown[];
+            messages?: unknown[];
+          };
+        }[];
+      }
+    | undefined;
     const statuses = entry?.changes?.[0]?.value?.statuses ?? [];
+    const messages = entry?.changes?.[0]?.value?.messages ?? [];
 
     for (const status of statuses as { id?: string; status?: string }[]) {
       const metaId = status.id;
@@ -73,7 +80,9 @@ router.post(
       else if (st === "read") await updateDeliveryStatusByMetaId(metaId, "read");
       else if (st === "failed") await updateDeliveryStatusByMetaId(metaId, "failed");
     }
-
+    if (messages.length > 0) {
+    await processIncomingWhatsAppMessage(payload);
+   }
     res.status(200).send("EVENT_RECEIVED");
   },
 );
