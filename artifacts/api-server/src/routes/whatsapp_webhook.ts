@@ -28,6 +28,11 @@ router.get("/", (req: Request, res: Response): void => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
   const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+  
+  console.log("VERIFY TOKEN:", process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN);
+  console.log("TOKEN FROM META:", token);
+  console.log("MODE:", mode);
+  console.log("========================");
 
   if (mode === "subscribe" && token === verifyToken && typeof challenge === "string") {
     res.status(200).send(challenge);

@@ -7,6 +7,8 @@ export async function processIncomingWhatsAppMessage(
   const entry = (payload as any)?.entry?.[0];
   const change = entry?.changes?.[0];
   const value = change?.value;
+  const phoneNumberId = value?.metadata?.phone_number_id;
+  console.log(JSON.stringify(value, null, 2));
 
   const message = value?.messages?.[0];
 
