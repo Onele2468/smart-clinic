@@ -4,6 +4,7 @@ import { consultationNotesTable, patientsTable, usersTable } from "@workspace/db
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 
 const router: IRouter = Router();
 
@@ -167,6 +168,27 @@ router.patch(
         message: `Consultation completed for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`,
         entityId: patientId,
       });
+      void Promise.all([
+        logQueueAudit({
+          clinicId,
+          patientId,
+          appointmentId: note.appointmentId ?? null,
+          staffId: user.userId,
+          oldStatus: "doctor_consultation",
+          newStatus: "completed",
+          notes: "Consultation Complete",
+        }),
+        notifyStaffWorkflow({
+          clinicId,
+          roles: ["receptionist"],
+          preferenceKey: "visitCompleted",
+          type: "queue",
+          title: "Consultation completed",
+          message: `Consultation completed for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""}.`,
+          entityId: note.id,
+          targetUrl: `/patients/${patientId}`,
+        }),
+      ]).catch(() => {});
     }
 
     const [doctor] = await db.select().from(usersTable).where(eq(usersTable.id, note.doctorId));

@@ -6,6 +6,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { AddToQueueBody, UpdateQueueEntryBody } from "@workspace/api-zod";
 import { requireAuth, requireClinicMember, requireRole, generateTicketNumber } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 import {
   countTodayQueueEntries,
   countWaitingQueue,
@@ -154,6 +155,37 @@ router.post("/clinics/:clinicId/queues", requireAuth as any, requireClinicMember
     message: `${patient?.firstName ?? ""} ${patient?.lastName ?? ""} added to queue (${ticketNumber})`,
     entityId: entry.id,
   });
+  void Promise.all([
+    logQueueAudit({
+      clinicId,
+      patientId: entry.patientId,
+      staffId: user.userId,
+      oldStatus: null,
+      newStatus: "waiting",
+      notes: "Check In",
+    }),
+    notifyStaffWorkflow({
+      clinicId,
+      roles: ["nurse"],
+      userIds: entry.assignedNurseId ? [entry.assignedNurseId] : [],
+      preferenceKey: "appointmentCheckedIn",
+      type: "queue",
+      title: entry.assignedNurseId ? "Patient assigned to nurse queue" : "Patient waiting for nurse",
+      message: `${patient?.firstName ?? ""} ${patient?.lastName ?? ""} is checked in and waiting for assessment (${ticketNumber}).`,
+      entityId: entry.id,
+      targetUrl: `/queue?queueId=${entry.id}`,
+    }),
+    notifyStaffWorkflow({
+      clinicId,
+      roles: ["receptionist"],
+      preferenceKey: "appointmentCheckedIn",
+      type: "queue",
+      title: "Patient checked in",
+      message: `${patient?.firstName ?? ""} ${patient?.lastName ?? ""} checked in (${ticketNumber}).`,
+      entityId: entry.id,
+      targetUrl: `/queue?queueId=${entry.id}`,
+    }),
+  ]).catch(() => {});
 
   logActivity({
     clinicId,
@@ -206,6 +238,9 @@ router.patch("/clinics/:clinicId/queues/:queueId", requireAuth as any, requireCl
     return;
   }
 
+  const [previousEntry] = await db.select().from(queueEntriesTable).where(
+    and(eq(queueEntriesTable.id, queueId), eq(queueEntriesTable.clinicId, clinicId))
+  );
   const updateData: Record<string, unknown> = { ...parsed.data };
   if (parsed.data.status === "nurse_assessment") {
     updateData.calledAt = new Date();
@@ -248,6 +283,83 @@ router.patch("/clinics/:clinicId/queues/:queueId", requireAuth as any, requireCl
     // Auto-sync doctor availability when queue status changes
     if (entry.assignedDoctorId) {
       await syncDoctorAvailabilityFromQueueStatus(clinicId, entry.assignedDoctorId, parsed.data.status);
+    }
+
+    const statusAuditLabel: Record<string, string> = {
+      waiting: "Check In",
+      nurse_assessment: "Nurse Assessment Start",
+      doctor_consultation: "Nurse Assessment Complete",
+      laboratory: "Lab Request Created",
+      pharmacy: "Prescription Issued",
+      completed: "Visit Completed",
+    };
+    void logQueueAudit({
+      clinicId,
+      patientId: entry.patientId,
+      staffId: user.userId,
+      oldStatus: previousEntry?.status ?? null,
+      newStatus: parsed.data.status,
+      notes: statusAuditLabel[parsed.data.status] ?? `Status changed to ${parsed.data.status}`,
+    }).catch(() => {});
+
+    const patientName = `${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`.trim();
+    if (parsed.data.status === "nurse_assessment") {
+      void notifyStaffWorkflow({
+        clinicId,
+        roles: ["nurse"],
+        userIds: entry.assignedNurseId ? [entry.assignedNurseId] : [],
+        preferenceKey: "appointmentCheckedIn",
+        type: "queue",
+        title: "Patient ready for assessment",
+        message: `${patientName} is in the nurse assessment workflow (${entry.ticketNumber}).`,
+        entityId: entry.id,
+        targetUrl: `/queue?queueId=${entry.id}`,
+      }).catch(() => {});
+    } else if (parsed.data.status === "doctor_consultation") {
+      void notifyStaffWorkflow({
+        clinicId,
+        roles: ["doctor"],
+        userIds: entry.assignedDoctorId ? [entry.assignedDoctorId] : [],
+        preferenceKey: "nurseAssessmentComplete",
+        type: "queue",
+        title: "Patient ready for consultation",
+        message: `${patientName} is ready for doctor consultation (${entry.ticketNumber}).`,
+        entityId: entry.id,
+        targetUrl: `/consultations/${entry.patientId}?queueId=${entry.id}`,
+      }).catch(() => {});
+    } else if (parsed.data.status === "laboratory") {
+      void notifyStaffWorkflow({
+        clinicId,
+        roles: ["lab_technician"],
+        preferenceKey: "labRequested",
+        type: "lab_request",
+        title: "Patient sent to laboratory",
+        message: `${patientName} has been sent to laboratory (${entry.ticketNumber}).`,
+        entityId: entry.id,
+        targetUrl: `/lab?queueId=${entry.id}`,
+      }).catch(() => {});
+    } else if (parsed.data.status === "pharmacy") {
+      void notifyStaffWorkflow({
+        clinicId,
+        roles: ["pharmacist"],
+        preferenceKey: "prescriptionIssued",
+        type: "prescription",
+        title: "Patient sent to pharmacy",
+        message: `${patientName} has been sent to pharmacy (${entry.ticketNumber}).`,
+        entityId: entry.id,
+        targetUrl: `/pharmacy?queueId=${entry.id}`,
+      }).catch(() => {});
+    } else if (parsed.data.status === "completed") {
+      void notifyStaffWorkflow({
+        clinicId,
+        roles: ["receptionist"],
+        preferenceKey: "visitCompleted",
+        type: "queue",
+        title: "Visit completed",
+        message: `${patientName} completed the visit (${entry.ticketNumber}).`,
+        entityId: entry.id,
+        targetUrl: `/queue?queueId=${entry.id}`,
+      }).catch(() => {});
     }
   }
 

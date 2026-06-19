@@ -4,6 +4,7 @@ import { prescriptionsTable, patientsTable, usersTable, queueEntriesTable, consu
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole, requireClinicModule } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 
 const router: IRouter = Router();
 
@@ -110,6 +111,40 @@ router.patch(
       message: `Prescription ${prescription.prescriptionCode} marked ${status} for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`,
       entityId: prescriptionId,
     });
+    void Promise.all([
+      logQueueAudit({
+        clinicId,
+        patientId: prescription.patientId,
+        staffId: user.userId,
+        oldStatus: "pharmacy",
+        newStatus: status === "collected" ? "completed" : "pharmacy",
+        notes: status === "dispensed" ? "Medication Dispensed" : status === "collected" ? "Visit Completed" : `Prescription ${status}`,
+      }),
+      status === "dispensed"
+        ? notifyStaffWorkflow({
+            clinicId,
+            roles: ["receptionist"],
+            preferenceKey: "medicationReady",
+            type: "prescription",
+            title: "Medication ready",
+            message: `Medication ready for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""} (${prescription.prescriptionCode}).`,
+            entityId: prescriptionId,
+            targetUrl: `/pharmacy?prescriptionId=${prescriptionId}`,
+          })
+        : Promise.resolve(),
+      status === "collected"
+        ? notifyStaffWorkflow({
+            clinicId,
+            roles: ["receptionist"],
+            preferenceKey: "visitCompleted",
+            type: "queue",
+            title: "Medication collected",
+            message: `${patient?.firstName ?? ""} ${patient?.lastName ?? ""} collected medication.`,
+            entityId: prescriptionId,
+            targetUrl: `/patients/${prescription.patientId}`,
+          })
+        : Promise.resolve(),
+    ]).catch(() => {});
 
     res.json({
       ...prescription,

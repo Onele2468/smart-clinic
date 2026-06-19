@@ -4,6 +4,7 @@ import { prescriptionsTable, patientsTable, usersTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole, generatePrescriptionCode } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 
 const router: IRouter = Router();
 
@@ -95,6 +96,26 @@ router.post(
       message: `Prescription ${prescriptionCode} issued for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""}: ${medicationName}`,
       entityId: prescription.id,
     });
+    void Promise.all([
+      logQueueAudit({
+        clinicId,
+        patientId,
+        staffId: user.userId,
+        oldStatus: "doctor_consultation",
+        newStatus: "pharmacy",
+        notes: "Prescription Issued",
+      }),
+      notifyStaffWorkflow({
+        clinicId,
+        roles: ["pharmacist"],
+        preferenceKey: "prescriptionIssued",
+        type: "prescription",
+        title: "New prescription",
+        message: `Prescription ${prescriptionCode} issued for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""}: ${medicationName}`,
+        entityId: prescription.id,
+        targetUrl: `/pharmacy?prescriptionId=${prescription.id}`,
+      }),
+    ]).catch(() => {});
 
     const [doctor] = await db.select().from(usersTable).where(eq(usersTable.id, user.userId));
     res.status(201).json({ ...prescription, doctorName: doctor?.name ?? "" });

@@ -7,7 +7,8 @@
     "dev": "npm run build && node --enable-source-maps -e \"process.env.NODE_ENV='development'; import('./dist/index.mjs')\"",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:conversation": "node --test test/whatsapp.conversation-architecture.test.mjs"
   },
   "dependencies": {
     "@workspace/api-zod": "*",

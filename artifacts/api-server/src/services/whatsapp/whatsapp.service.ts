@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { logger } from "../../lib/logger";
+import { isNotificationEnabled } from "../notifications/notification-preferences.service";
 import { buildWhatsAppMessage, buildOperationalAlertMessage } from "./whatsapp.templates";
 import {
   postMetaMessages,
@@ -95,6 +96,39 @@ export async function getClinicWhatsAppConfig(clinicId: string): Promise<ClinicW
 
   return {
     clinicId: clinic.clinicId,
+    enabled: clinic.enabled,
+    provider: (clinic.provider ?? "meta") as WhatsAppProvider,
+    accessToken: clinic.accessToken ?? null,
+    phoneNumberId: clinic.phoneNumberId ?? null,
+    businessAccountId: clinic.businessAccountId ?? null,
+    messagingMode: (clinic.messagingMode ?? "auto") as WhatsAppMessagingMode,
+    outboundTemplate: clinic.outboundTemplate ?? null,
+  };
+}
+
+export async function getClinicWhatsAppConfigByPhoneNumberId(
+  phoneNumberId: string,
+): Promise<(ClinicWhatsAppConfig & { clinicName: string }) | null> {
+  const [clinic] = await db
+    .select({
+      clinicId: clinicsTable.id,
+      clinicName: clinicsTable.name,
+      enabled: clinicsTable.whatsappEnabled,
+      provider: clinicsTable.whatsappProvider,
+      accessToken: clinicsTable.whatsappAccessToken,
+      phoneNumberId: clinicsTable.whatsappPhoneNumberId,
+      businessAccountId: clinicsTable.whatsappBusinessAccountId,
+      messagingMode: clinicsTable.whatsappMessagingMode,
+      outboundTemplate: clinicsTable.whatsappOutboundTemplate,
+    })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.whatsappPhoneNumberId, phoneNumberId));
+
+  if (!clinic) return null;
+
+  return {
+    clinicId: clinic.clinicId,
+    clinicName: clinic.clinicName,
     enabled: clinic.enabled,
     provider: (clinic.provider ?? "meta") as WhatsAppProvider,
     accessToken: clinic.accessToken ?? null,
@@ -275,6 +309,17 @@ async function sendMetaText(
   body: string,
   logContext: Record<string, unknown>,
 ) {
+
+  logger.info(
+    {
+      tokenExists: !!config.accessToken,
+      tokenLength: config.accessToken?.length,
+      phoneNumberId: config.phoneNumberId,
+      toPhone,
+    },
+    "META SEND DEBUG",
+  );
+
   return postMetaMessages(
     config.phoneNumberId!,
     config.accessToken!,
@@ -359,7 +404,18 @@ export async function deliverPatientWhatsAppMessage(params: {
     return finalize(await sendMetaText(config, toPhone, body, logContext), templateName);
   }
 
-  const textResult = await sendMetaText(config, toPhone, body, logContext);
+  logger.info(
+  {
+    tokenExists: !!config.accessToken,
+    tokenLength: config.accessToken?.length,
+    phoneNumberId: config.phoneNumberId,
+    phoneNumberSuffix: config.phoneNumberId?.slice(-4),
+    messagingMode: config.messagingMode,
+  },
+  "WHATSAPP DEBUG",
+);
+
+const textResult = await sendMetaText(config, toPhone, body, logContext);
   if (textResult.ok) {
     return { metaMessageId: textResult.messageId, templateName: "session_text" };
   }
@@ -464,6 +520,10 @@ export function dispatchWhatsAppNotification(payload: WhatsAppDispatchPayload): 
 
     try {
       const { actionType, clinicId } = payload;
+      if (!(await isNotificationEnabled(clinicId, actionType))) {
+        logger.info(baseLog, "[whatsapp] Skipped - notification preference disabled");
+        return;
+      }
 
       const config = await getClinicWhatsAppConfig(clinicId);
       if (!config) {

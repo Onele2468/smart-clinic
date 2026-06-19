@@ -7,6 +7,7 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole, requireClinicModule } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
 import { logOperationalAlert } from "../services/whatsapp/operationalAlerts.triggers";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 
 const router: IRouter = Router();
 
@@ -175,6 +176,26 @@ router.post(
       message: labMessage,
       entityId: request.id,
     });
+    void Promise.all([
+      logQueueAudit({
+        clinicId,
+        patientId,
+        staffId: user.userId,
+        oldStatus: "doctor_consultation",
+        newStatus: "laboratory",
+        notes: "Lab Request Created",
+      }),
+      notifyStaffWorkflow({
+        clinicId,
+        roles: ["lab_technician"],
+        preferenceKey: "labRequested",
+        type: "lab_request",
+        title: "New lab request",
+        message: labMessage,
+        entityId: request.id,
+        targetUrl: `/lab?requestId=${request.id}`,
+      }),
+    ]).catch(() => {});
 
     const [doctor] = await db.select().from(usersTable).where(eq(usersTable.id, user.userId));
     res.status(201).json({ ...request, doctorName: doctor?.name ?? "" });
@@ -198,6 +219,9 @@ router.patch(
       return;
     }
 
+    const [previousRequest] = await db.select().from(labRequestsTable).where(
+      and(eq(labRequestsTable.id, requestId), eq(labRequestsTable.clinicId, clinicId), eq(labRequestsTable.patientId, patientId))
+    );
     const [request] = await db.update(labRequestsTable).set({ status }).where(
       and(eq(labRequestsTable.id, requestId), eq(labRequestsTable.clinicId, clinicId), eq(labRequestsTable.patientId, patientId))
     ).returning();
@@ -208,6 +232,16 @@ router.patch(
     }
 
     const [doctor] = await db.select().from(usersTable).where(eq(usersTable.id, request.doctorId));
+    if (status === "in_progress") {
+      void logQueueAudit({
+        clinicId,
+        patientId,
+        staffId: (req as any).user?.userId ?? null,
+        oldStatus: previousRequest?.status ?? null,
+        newStatus: "laboratory",
+        notes: "Lab Processing Started",
+      }).catch(() => {});
+    }
     res.json({ ...request, doctorName: doctor?.name ?? "" });
   }
 );
@@ -297,6 +331,27 @@ router.post(
       message: `Lab result submitted for ${labReq?.testName ?? "test"} (${labReq?.requestCode ?? ""})`,
       entityId: result.id,
     });
+    void Promise.all([
+      logQueueAudit({
+        clinicId,
+        patientId,
+        staffId: user.userId,
+        oldStatus: "laboratory",
+        newStatus: "doctor_consultation",
+        notes: "Lab Result Submitted",
+      }),
+      notifyStaffWorkflow({
+        clinicId,
+        roles: ["doctor"],
+        userIds: labReq?.doctorId ? [labReq.doctorId] : [],
+        preferenceKey: "labResultReady",
+        type: "lab_result",
+        title: "Lab results ready",
+        message: `Lab result ready for ${labReq?.testName ?? "test"} (${labReq?.requestCode ?? ""}).`,
+        entityId: result.id,
+        targetUrl: `/lab?requestId=${requestId}`,
+      }),
+    ]).catch(() => {});
 
     res.status(201).json({ ...result, technicianName: tech?.name ?? "" });
   }

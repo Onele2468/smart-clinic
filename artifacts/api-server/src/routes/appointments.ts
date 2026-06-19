@@ -8,6 +8,8 @@ import { eq, and, sql, desc } from "drizzle-orm";
 import { CreateAppointmentBody, UpdateAppointmentBody } from "@workspace/api-zod";
 import { requireAuth, requireClinicMember, requireRole } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { getClinicSchedulingSettings, validateAppointmentSlot } from "../services/scheduling.service";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 
 const router: IRouter = Router();
 
@@ -63,18 +65,35 @@ router.post("/clinics/:clinicId/appointments", requireAuth as any, requireClinic
   }
 
   const visitReason = (req.body as any).visitReason ?? null;
+  const settings = await getClinicSchedulingSettings(clinicId);
+  if (!settings.onlineBookingEnabled && user.role !== "clinic_admin" && user.role !== "receptionist") {
+    res.status(403).json({ error: "Online booking is disabled for this clinic." });
+    return;
+  }
+  const durationMinutes = parsed.data.durationMinutes ?? settings.appointmentSlotDurationMinutes;
+  const scheduledAt = new Date(parsed.data.scheduledAt);
+  const validation = await validateAppointmentSlot({
+    clinicId,
+    doctorId: parsed.data.doctorId,
+    scheduledAt,
+    durationMinutes,
+  });
+  if (!validation.available) {
+    res.status(409).json({ error: validation.reason, code: validation.code });
+    return;
+  }
 
   const [appointment] = await db.insert(appointmentsTable).values({
     clinicId,
     patientId: parsed.data.patientId,
     doctorId: parsed.data.doctorId,
     createdById: user.userId,
-    scheduledAt: new Date(parsed.data.scheduledAt),
+    scheduledAt,
     type: parsed.data.type,
     status: "scheduled",
     visitReason,
     notes: parsed.data.notes ?? null,
-    durationMinutes: parsed.data.durationMinutes ?? 30,
+    durationMinutes,
   }).returning();
 
   const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, appointment.patientId));
@@ -90,6 +109,17 @@ router.post("/clinics/:clinicId/appointments", requireAuth as any, requireClinic
     message: `Appointment booked for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""} with Dr. ${doctor?.name ?? ""}`,
     entityId: appointment.id,
   });
+  void notifyStaffWorkflow({
+    clinicId,
+    roles: ["receptionist"],
+    userIds: [appointment.doctorId],
+    preferenceKey: "appointmentBooked",
+    type: "appointment",
+    title: "Appointment booked",
+    message: `Appointment booked for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""} with Dr. ${doctor?.name ?? ""}`,
+    entityId: appointment.id,
+    targetUrl: `/appointments?appointmentId=${appointment.id}`,
+  }).catch(() => {});
 
   res.status(201).json({
     ...appointment,
@@ -140,6 +170,9 @@ router.patch("/clinics/:clinicId/appointments/:appointmentId", requireAuth as an
     updateData.checkedInAt = new Date();
   }
 
+  const [previousAppointment] = await db.select().from(appointmentsTable).where(
+    and(eq(appointmentsTable.id, appointmentId), eq(appointmentsTable.clinicId, clinicId))
+  );
   const [appointment] = await db.update(appointmentsTable).set(updateData).where(
     and(eq(appointmentsTable.id, appointmentId), eq(appointmentsTable.clinicId, clinicId))
   ).returning();
@@ -173,6 +206,37 @@ router.patch("/clinics/:clinicId/appointments/:appointmentId", requireAuth as an
         message: `Patient checked in for appointment`,
         entityId: appointmentId,
       });
+      void Promise.all([
+        logQueueAudit({
+          clinicId,
+          patientId: appointment.patientId,
+          appointmentId,
+          staffId: user.userId,
+          oldStatus: previousAppointment?.status ?? null,
+          newStatus: "checked_in",
+          notes: "Check In",
+        }),
+        notifyStaffWorkflow({
+          clinicId,
+          roles: ["nurse"],
+          preferenceKey: "appointmentCheckedIn",
+          type: "queue",
+          title: "Patient checked in",
+          message: `Patient checked in and is waiting for nurse assessment.`,
+          entityId: appointment.patientId,
+          targetUrl: `/patients/${appointment.patientId}`,
+        }),
+        notifyStaffWorkflow({
+          clinicId,
+          roles: ["receptionist"],
+          preferenceKey: "appointmentCheckedIn",
+          type: "appointment",
+          title: "Patient checked in",
+          message: `Patient checked in for appointment.`,
+          entityId: appointmentId,
+          targetUrl: `/appointments?appointmentId=${appointmentId}`,
+        }),
+      ]).catch(() => {});
     }
   }
 

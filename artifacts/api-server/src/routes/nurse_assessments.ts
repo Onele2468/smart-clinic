@@ -4,6 +4,7 @@ import { nurseAssessmentsTable, patientsTable, usersTable, queueEntriesTable } f
 import { eq, and, sql } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { logQueueAudit, notifyStaffWorkflow } from "../services/notifications/workflow-notifications.service";
 
 const router: IRouter = Router();
 
@@ -122,7 +123,12 @@ router.post(
     }).returning();
 
     // If linked to a queue entry, move to doctor_consultation
+    let previousQueueStatus: string | null = null;
+    let assignedDoctorId: string | null = null;
     if (queueEntryId) {
+      const [queueEntry] = await db.select().from(queueEntriesTable).where(and(eq(queueEntriesTable.id, queueEntryId), eq(queueEntriesTable.clinicId, clinicId)));
+      previousQueueStatus = queueEntry?.status ?? null;
+      assignedDoctorId = queueEntry?.assignedDoctorId ?? null;
       await db.update(queueEntriesTable).set({
         status: "doctor_consultation",
         nurseStartedAt: assessment.createdAt,
@@ -141,6 +147,29 @@ router.post(
       message: `Nurse assessment completed for ${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`,
       entityId: patientId,
     });
+    if (queueEntryId) {
+      void Promise.all([
+        logQueueAudit({
+          clinicId,
+          patientId,
+          staffId: user.userId,
+          oldStatus: previousQueueStatus,
+          newStatus: "doctor_consultation",
+          notes: "Nurse Assessment Complete",
+        }),
+        notifyStaffWorkflow({
+          clinicId,
+          roles: ["doctor"],
+          userIds: assignedDoctorId ? [assignedDoctorId] : [],
+          preferenceKey: "nurseAssessmentComplete",
+          type: "queue",
+          title: "Assessment complete",
+          message: `${patient?.firstName ?? ""} ${patient?.lastName ?? ""} is ready for consultation.`,
+          entityId: queueEntryId,
+          targetUrl: `/consultations/${patientId}?queueId=${queueEntryId}`,
+        }),
+      ]).catch(() => {});
+    }
 
     const [nurse] = await db.select().from(usersTable).where(eq(usersTable.id, user.userId));
     res.status(201).json({ ...assessment, nurseName: nurse?.name ?? "" });

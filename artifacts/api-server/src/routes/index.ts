@@ -16,6 +16,7 @@ import inventoryRouter from "./inventory";
 import staffAvailabilityRouter from "./staff_availability";
 import suppliersRoutes from "./suppliers";
 import whatsappRouter from "./whatsapp";
+import clinicSettingsRouter from "./clinic_settings";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(inventoryRouter);
 router.use(staffAvailabilityRouter);
 router.use("/suppliers", suppliersRoutes);
 router.use(whatsappRouter);
+router.use(clinicSettingsRouter);
 
 export default router;
