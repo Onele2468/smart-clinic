@@ -2,6 +2,7 @@ import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useListNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, getListNotificationsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +31,7 @@ export default function Notifications() {
   const { clinicMembership } = useAuth();
   const clinicId = clinicMembership?.clinicId || "";
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const { data: notifications, isLoading } = useListNotifications(clinicId, {
     query: {
@@ -44,6 +46,15 @@ export default function Notifications() {
   const handleMarkRead = async (notificationId: string) => {
     await markReadMutation.mutateAsync({ clinicId, notificationId });
     queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey(clinicId) });
+  };
+
+  const openNotification = async (notification: any) => {
+    if (!notification.isRead) {
+      await handleMarkRead(notification.id);
+    }
+    if (notification.targetUrl) {
+      navigate(notification.targetUrl);
+    }
   };
 
   const handleMarkAllRead = async () => {
@@ -107,7 +118,8 @@ export default function Notifications() {
               {notifications.map((n, idx) => (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 py-3.5 ${idx < notifications.length - 1 ? "border-b" : ""} ${!n.isRead ? "bg-primary/5 -mx-2 px-2 rounded-lg" : ""}`}
+                  className={`flex items-start gap-3 py-3.5 ${idx < notifications.length - 1 ? "border-b" : ""} ${!n.isRead ? "bg-primary/5 -mx-2 px-2 rounded-lg" : ""} ${(n as any).targetUrl ? "cursor-pointer hover:bg-muted/60" : ""}`}
+                  onClick={() => openNotification(n)}
                   data-testid={`notification-item-${n.id}`}
                 >
                   <div className={`h-2 w-2 rounded-full mt-2 shrink-0 ${!n.isRead ? "bg-primary" : "bg-transparent"}`} />
@@ -126,7 +138,11 @@ export default function Notifications() {
                       size="sm"
                       variant="ghost"
                       className="h-7 text-xs shrink-0"
-                      onClick={() => handleMarkRead(n.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleMarkRead(n.id);
+                      }}
+                      onMouseDown={(event) => event.stopPropagation()}
                       disabled={markReadMutation.isPending}
                     >
                       <CheckCheck className="h-3 w-3 mr-1" /> Read

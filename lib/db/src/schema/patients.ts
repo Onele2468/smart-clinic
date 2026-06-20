@@ -24,6 +24,8 @@ export const patientsTable = pgTable("patients", {
   medicalAidNumber: text("medical_aid_number"),
   governmentIdType: text("government_id_type"),       // 'SA_ID' | 'PASSPORT'
   governmentIdNumber: text("government_id_number"),
+  primaryDoctorId: uuid("primary_doctor_id").references(() => usersTable.id),
+  backupDoctorId: uuid("backup_doctor_id").references(() => usersTable.id),
   nationality: text("nationality"),                   // e.g. 'South African', 'Zimbabwean'
   emergencyContactName: text("emergency_contact_name"),
   emergencyContactPhone: text("emergency_contact_phone"),

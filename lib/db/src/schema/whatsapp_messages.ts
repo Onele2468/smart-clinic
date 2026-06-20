@@ -1,8 +1,9 @@
-import { pgTable, text, timestamp, uuid, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { clinicsTable } from "./clinics";
 import { patientsTable } from "./patients";
+import { whatsappConversationsTable } from "./whatsapp_conversations";
 
 /** persisted delivery lifecycle for outbound WhatsApp messages */
 export const whatsappMessagesTable = pgTable(
@@ -13,6 +14,9 @@ export const whatsappMessagesTable = pgTable(
       .notNull()
       .references(() => clinicsTable.id),
     patientId: uuid("patient_id").references(() => patientsTable.id),
+    conversationId: uuid("conversation_id").references(() => whatsappConversationsTable.id),
+    direction: text("direction").notNull().default("outbound"),
+    messageText: text("message_text"),
     actionType: text("action_type").notNull(),
     entityId: uuid("entity_id"),
     reminderKey: text("reminder_key"),
@@ -36,6 +40,7 @@ export const whatsappMessagesTable = pgTable(
   (table) => ({
     clinicStatusIdx: index("whatsapp_messages_clinic_status_idx").on(table.clinicId, table.deliveryStatus),
     metaMessageIdx: index("whatsapp_messages_meta_message_id_idx").on(table.metaMessageId),
+    uniqueMetaMessageIdx: uniqueIndex("whatsapp_messages_meta_message_id_unique").on(table.metaMessageId),
     dedupeIdx: index("whatsapp_messages_dedupe_idx").on(
       table.clinicId,
       table.actionType,

@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Building2, Receipt, MessageCircle, Bell } from "lucide-react";
+import { Copy, Building2, Receipt, MessageCircle, Bell, CalendarClock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const BASE = import.meta.env.BASE_URL;
@@ -139,6 +139,116 @@ export default function Settings() {
     }
     whatsappMutation.mutate(payload);
   };
+
+  type SchedulingForm = {
+    timezone: string;
+    openingTime: string;
+    closingTime: string;
+    workingDays: number[];
+    appointmentSlotDurationMinutes: number;
+    bookingWindowDays: number;
+    maxPatientsPerSlot: number;
+    allowWalkins: boolean;
+    onlineBookingEnabled: boolean;
+    whatsappSelfServiceBookingEnabled: boolean;
+  };
+
+  const [schedulingForm, setSchedulingForm] = React.useState<SchedulingForm>({
+    timezone: "Africa/Johannesburg",
+    openingTime: "08:00",
+    closingTime: "17:00",
+    workingDays: [1, 2, 3, 4, 5],
+    appointmentSlotDurationMinutes: 30,
+    bookingWindowDays: 30,
+    maxPatientsPerSlot: 1,
+    allowWalkins: false,
+    onlineBookingEnabled: true,
+    whatsappSelfServiceBookingEnabled: true,
+  });
+  const schedulingInitialized = useRef(false);
+
+  const { data: schedulingSettings, isLoading: schedulingLoading } = useQuery({
+    queryKey: ["clinic-scheduling-settings", clinic?.id],
+    queryFn: () => apiFetch(`/clinic-settings/${clinic!.id}`),
+    enabled: !!clinic?.id && isAdmin,
+  });
+
+  React.useEffect(() => {
+    if (!schedulingSettings || schedulingInitialized.current) return;
+    setSchedulingForm({
+      timezone: schedulingSettings.timezone ?? "Africa/Johannesburg",
+      openingTime: schedulingSettings.openingTime ?? "08:00",
+      closingTime: schedulingSettings.closingTime ?? "17:00",
+      workingDays: Array.isArray(schedulingSettings.workingDays) ? schedulingSettings.workingDays : [1, 2, 3, 4, 5],
+      appointmentSlotDurationMinutes: schedulingSettings.appointmentSlotDurationMinutes ?? 30,
+      bookingWindowDays: schedulingSettings.bookingWindowDays ?? 30,
+      maxPatientsPerSlot: schedulingSettings.maxPatientsPerSlot ?? 1,
+      allowWalkins: !!schedulingSettings.allowWalkins,
+      onlineBookingEnabled: schedulingSettings.onlineBookingEnabled ?? true,
+      whatsappSelfServiceBookingEnabled: schedulingSettings.whatsappSelfServiceBookingEnabled ?? true,
+    });
+    schedulingInitialized.current = true;
+  }, [schedulingSettings]);
+
+  const schedulingMutation = useMutation({
+    mutationFn: (data: SchedulingForm) =>
+      apiFetch(`/clinic-settings/${clinic?.id}`, { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: (data: SchedulingForm) => {
+      schedulingInitialized.current = false;
+      queryClient.setQueryData(["clinic-scheduling-settings", clinic?.id], data);
+      toast({ title: "Clinic scheduling settings updated" });
+    },
+    onError: (e: any) => toast({ variant: "destructive", title: "Update failed", description: e.message }),
+  });
+
+  type NotificationPreferencesForm = {
+    appointmentBooked: boolean;
+    appointmentReminder: boolean;
+    appointmentCheckedIn: boolean;
+    nurseAssessmentComplete: boolean;
+    labRequested: boolean;
+    labResultReady: boolean;
+    prescriptionIssued: boolean;
+    medicationReady: boolean;
+    visitCompleted: boolean;
+  };
+
+  const defaultNotificationPreferences: NotificationPreferencesForm = {
+    appointmentBooked: true,
+    appointmentReminder: true,
+    appointmentCheckedIn: true,
+    nurseAssessmentComplete: true,
+    labRequested: true,
+    labResultReady: true,
+    prescriptionIssued: true,
+    medicationReady: true,
+    visitCompleted: true,
+  };
+  const [notificationPrefs, setNotificationPrefs] = React.useState<NotificationPreferencesForm>(defaultNotificationPreferences);
+  const notificationPrefsInitialized = useRef(false);
+
+  const { data: notificationPreferenceSettings, isLoading: notificationPrefsLoading } = useQuery({
+    queryKey: ["notification-preferences", clinic?.id],
+    queryFn: () => apiFetch(`/clinic-settings/${clinic!.id}/notification-preferences`),
+    enabled: !!clinic?.id && isAdmin,
+  });
+
+  React.useEffect(() => {
+    if (!notificationPreferenceSettings || notificationPrefsInitialized.current) return;
+    setNotificationPrefs({ ...defaultNotificationPreferences, ...notificationPreferenceSettings });
+    notificationPrefsInitialized.current = true;
+  }, [notificationPreferenceSettings]);
+
+  const notificationPrefsMutation = useMutation({
+    mutationFn: (data: NotificationPreferencesForm) =>
+      apiFetch(`/clinic-settings/${clinic?.id}/notification-preferences`, { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: (data: NotificationPreferencesForm) => {
+      notificationPrefsInitialized.current = false;
+      queryClient.setQueryData(["notification-preferences", clinic?.id], data);
+      toast({ title: "Notification preferences updated" });
+    },
+    onError: (e: any) => toast({ variant: "destructive", title: "Update failed", description: e.message }),
+  });
 
   type AlertToggle = { enabled: boolean; threshold?: number };
   type OperationalAlertsForm = {
@@ -449,6 +559,129 @@ export default function Settings() {
                   disabled={operationalAlertsMutation.isPending}
                 >
                   {operationalAlertsMutation.isPending ? "Saving..." : "Save Operational Alert Settings"}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && clinic && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="w-5 h-5" /> Scheduling
+            </CardTitle>
+            <CardDescription>Controls appointment availability for reception and WhatsApp booking.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {schedulingLoading && !schedulingInitialized.current ? (
+              <Skeleton className="h-32 w-full" />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Timezone</p>
+                    <Input value={schedulingForm.timezone} onChange={(e) => setSchedulingForm((f) => ({ ...f, timezone: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Opening Time</p>
+                    <Input type="time" value={schedulingForm.openingTime} onChange={(e) => setSchedulingForm((f) => ({ ...f, openingTime: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Closing Time</p>
+                    <Input type="time" value={schedulingForm.closingTime} onChange={(e) => setSchedulingForm((f) => ({ ...f, closingTime: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Working Days</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      ["Sun", 0], ["Mon", 1], ["Tue", 2], ["Wed", 3], ["Thu", 4], ["Fri", 5], ["Sat", 6],
+                    ].map(([label, day]) => {
+                      const value = Number(day);
+                      const active = schedulingForm.workingDays.includes(value);
+                      return (
+                        <Button
+                          key={value}
+                          type="button"
+                          size="sm"
+                          variant={active ? "default" : "outline"}
+                          onClick={() => setSchedulingForm((f) => ({
+                            ...f,
+                            workingDays: active ? f.workingDays.filter((d) => d !== value) : [...f.workingDays, value].sort(),
+                          }))}
+                        >
+                          {label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Slot Duration</p>
+                    <Input type="number" min={5} value={schedulingForm.appointmentSlotDurationMinutes} onChange={(e) => setSchedulingForm((f) => ({ ...f, appointmentSlotDurationMinutes: Math.max(5, parseInt(e.target.value, 10) || 5) }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Booking Window Days</p>
+                    <Input type="number" min={1} value={schedulingForm.bookingWindowDays} onChange={(e) => setSchedulingForm((f) => ({ ...f, bookingWindowDays: Math.max(1, parseInt(e.target.value, 10) || 1) }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Max Patients Per Slot</p>
+                    <Input type="number" min={1} value={schedulingForm.maxPatientsPerSlot} onChange={(e) => setSchedulingForm((f) => ({ ...f, maxPatientsPerSlot: Math.max(1, parseInt(e.target.value, 10) || 1) }))} />
+                  </div>
+                </div>
+                {[
+                  ["allowWalkins", "Allow Walk-ins"],
+                  ["onlineBookingEnabled", "Enable Online Booking"],
+                  ["whatsappSelfServiceBookingEnabled", "Enable Self-Service WhatsApp Booking"],
+                ].map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <p className="text-sm font-medium">{label}</p>
+                    <Switch checked={!!schedulingForm[key as keyof SchedulingForm]} onCheckedChange={(checked) => setSchedulingForm((f) => ({ ...f, [key]: checked }))} />
+                  </div>
+                ))}
+                <Button type="button" onClick={() => schedulingMutation.mutate(schedulingForm)} disabled={schedulingMutation.isPending}>
+                  {schedulingMutation.isPending ? "Saving..." : "Save Scheduling Settings"}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && clinic && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5" /> Notification Settings
+            </CardTitle>
+            <CardDescription>Applies to WhatsApp, internal staff notifications, and future SMS integrations.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {notificationPrefsLoading && !notificationPrefsInitialized.current ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (
+              <>
+                {[
+                  ["appointmentBooked", "Appointment Booked"],
+                  ["appointmentReminder", "Appointment Reminder"],
+                  ["appointmentCheckedIn", "Appointment Checked In"],
+                  ["nurseAssessmentComplete", "Nurse Assessment Complete"],
+                  ["labRequested", "Lab Requested"],
+                  ["labResultReady", "Lab Results Ready"],
+                  ["prescriptionIssued", "Prescription Issued"],
+                  ["medicationReady", "Medication Ready"],
+                  ["visitCompleted", "Visit Completed"],
+                ].map(([key, label]) => (
+                  <div key={key} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <p className="text-sm font-medium">{label}</p>
+                    <Switch checked={notificationPrefs[key as keyof NotificationPreferencesForm]} onCheckedChange={(checked) => setNotificationPrefs((f) => ({ ...f, [key]: checked }))} />
+                  </div>
+                ))}
+                <Button type="button" onClick={() => notificationPrefsMutation.mutate(notificationPrefs)} disabled={notificationPrefsMutation.isPending}>
+                  {notificationPrefsMutation.isPending ? "Saving..." : "Save Notification Settings"}
                 </Button>
               </>
             )}

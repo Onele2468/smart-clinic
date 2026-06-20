@@ -1096,9 +1096,11 @@ export const ListNotificationsResponseItem = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
   "clinicId": zod.string(),
-  "type": zod.enum(['join_request', 'appointment', 'queue', 'general']),
+  "type": zod.string(),
   "title": zod.string(),
   "message": zod.string(),
+  "entityId": zod.string().nullable().optional(),
+  "targetUrl": zod.string().nullable().optional(),
   "isRead": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -1130,9 +1132,11 @@ export const MarkNotificationReadResponse = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
   "clinicId": zod.string(),
-  "type": zod.enum(['join_request', 'appointment', 'queue', 'general']),
+  "type": zod.string(),
   "title": zod.string(),
   "message": zod.string(),
+  "entityId": zod.string().nullable().optional(),
+  "targetUrl": zod.string().nullable().optional(),
   "isRead": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
@@ -2366,5 +2370,4 @@ export const AdjustStockBody = zod.object({
 })
 
 export const AdjustStockResponse = zod.void()
-
 

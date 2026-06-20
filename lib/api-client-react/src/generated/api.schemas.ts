@@ -1356,15 +1356,7 @@ export interface StaffPerformance {
   periodDays: number;
 }
 
-export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
-
-
-export const NotificationType = {
-  join_request: 'join_request',
-  appointment: 'appointment',
-  queue: 'queue',
-  general: 'general',
-} as const;
+export type NotificationType = string;
 
 export interface Notification {
   id: string;
@@ -1373,6 +1365,10 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
+  /** @nullable */
+  entityId?: string | null;
+  /** @nullable */
+  targetUrl?: string | null;
   isRead: boolean;
   createdAt: string;
 }
@@ -1719,4 +1715,3 @@ export type ListInventoryItemsParams = {
 category?: string;
 lowStock?: boolean;
 };
-
