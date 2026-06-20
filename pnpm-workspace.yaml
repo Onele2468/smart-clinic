@@ -1,0 +1,14 @@
+packages:
+
+  - "artifacts/api-server"
+
+  - "artifacts/smart-clinic"
+
+  - "lib/api-client-react"
+
+  - "lib/api-zod"
+
+  - "lib/db"
+allowBuilds:
+  bcrypt: false
+  esbuild: false
