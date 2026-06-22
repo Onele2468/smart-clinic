@@ -4,13 +4,10 @@
   "buildCommand": "pnpm run build",
   "outputDirectory": "artifacts/smart-clinic/dist/public",
   "functions": {
-    "api/index.ts": {
-      "maxDuration": 30
-    },
-    "api/cron/whatsapp.ts": {
-      "maxDuration": 60
-    }
-  },
+  "api/index.ts": {
+    "maxDuration": 30
+  }
+},
   "rewrites": [
     {
       "source": "/api/(.*)",
