@@ -4,9 +4,9 @@ import cors from "cors";
 import type { IncomingMessage, ServerResponse } from "http";
 import type { pinoHttp as pinoHttpFactory } from "pino-http";
 import type { rateLimit as rateLimitFactory } from "express-rate-limit";
-import router from "./routes";
-import whatsappWebhookRouter from "./routes/whatsapp_webhook";
-import { logger } from "./lib/logger";
+import router from "./routes/index.js";
+import whatsappWebhookRouter from "./routes/whatsapp_webhook.js";
+import { logger } from "./lib/logger.js";
 
 const nodeRequire = createRequire(import.meta.url);
 const pinoHttp = nodeRequire("pino-http") as typeof pinoHttpFactory;
