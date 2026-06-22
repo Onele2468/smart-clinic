@@ -29,11 +29,9 @@ app.listen(port, async (err) => {
     await pool.query("SELECT 1");
     logger.info("Database connectivity verified OK");
 
-    const { startWhatsappReminderScheduler, startWhatsappRetryScheduler } = await import(
-      "./services/whatsapp/whatsapp.reminder.scheduler"
-    );
-    startWhatsappReminderScheduler();
-    startWhatsappRetryScheduler();
+    logger.info(
+  "WhatsApp reminder scheduler temporarily disabled for deployment",
+);
   } catch (dbErr) {
     logger.error(
       { err: dbErr },
