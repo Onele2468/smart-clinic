@@ -12,7 +12,7 @@ const nodeRequire = createRequire(import.meta.url);
 const pinoHttp = nodeRequire("pino-http") as typeof pinoHttpFactory;
 const rateLimit = nodeRequire("express-rate-limit") as typeof rateLimitFactory;
 
-const app: Express = express();
+const app = express();
 
 // Trust one upstream proxy so express-rate-limit can use forwarded client IPs.
 app.set("trust proxy", 1);
