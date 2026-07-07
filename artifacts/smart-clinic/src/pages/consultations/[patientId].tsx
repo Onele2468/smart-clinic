@@ -139,8 +139,6 @@ export default function ConsultationPage() {
 
   const [isPrescriptionOpen, setIsPrescriptionOpen] = useState(false);
   const [isLabOpen, setIsLabOpen] = useState(false);
-  const [aiSummary, setAiSummary] = useState("");
-  const [generatingAI, setGeneratingAI] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -259,76 +257,6 @@ export default function ConsultationPage() {
     const t = setTimeout(() => saveNote(values), 3000);
     setAutoSaveTimeout(t);
   };
-  const generateAISummary = async () => {
-  try {
-    setGeneratingAI(true);
-
-    const values = noteForm.getValues();
-
-    const prompt = `
-You are an AI Clinical Assistant.
-
-Create a professional consultation summary.
-
-Chief Complaint:
-${values.chiefComplaint}
-
-Symptoms:
-${values.symptoms}
-
-Diagnosis:
-${values.diagnosis}
-
-Treatment Plan:
-${values.treatmentPlan}
-
-Prescription:
-${values.prescription}
-
-Follow-up:
-${values.followUpInstructions}
-
-Additional Notes:
-${values.notes}
-
-Write:
-
-1. Consultation Summary
-2. Clinical Impression
-3. Follow-up Advice
-
-Do not invent information.
-`;
-
-    const response = await fetch("http://localhost:3000/api/ai/summary", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      setAiSummary(data.summary);
-    }
-
-  } catch (err) {
-    console.error(err);
-
-    toast({
-      variant: "destructive",
-      title: "AI Error",
-      description: "Failed to generate summary.",
-    });
-
-  } finally {
-    setGeneratingAI(false);
-  }
-};
 
   const onSubmitPrescription = async (values: z.infer<typeof rxSchema>) => {
     try {
@@ -733,35 +661,7 @@ Do not invent information.
                       <Textarea rows={2} placeholder="Other clinical observations..." {...noteForm.register("notes")} />
                     </div>
                   </div>
-                  <div className="border rounded-lg p-4 bg-slate-50 space-y-3">
 
-  <div className="flex justify-between items-center">
-
-    <h3 className="font-semibold">
-      AI Clinical Assistant
-    </h3>
-
-    <Button
-      type="button"
-      onClick={generateAISummary}
-      disabled={generatingAI}
-    >
-      {generatingAI
-        ? "Generating..."
-        : "✨ Generate AI Summary"}
-    </Button>
-
-  </div>
-
-  {aiSummary && (
-    <Textarea
-      rows={10}
-      value={aiSummary}
-      readOnly
-    />
-  )}
-
-</div>
                   <div className="flex items-center justify-between pt-2 border-t">
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm"
