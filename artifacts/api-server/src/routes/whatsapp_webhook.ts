@@ -86,8 +86,15 @@ router.post(
       else if (st === "failed") await updateDeliveryStatusByMetaId(metaId, "failed");
     }
     if (messages.length > 0) {
+  try {
+    console.log("Processing incoming WhatsApp message...");
     await processIncomingWhatsAppMessage(payload);
-   }
+    console.log("Finished processing message.");
+  } catch (error) {
+    console.error("WHATSAPP ERROR:", error);
+    throw error;
+  }
+}
     res.status(200).send("EVENT_RECEIVED");
   },
 );
