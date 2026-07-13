@@ -7,6 +7,7 @@ import { dirname, resolve } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const conversationSource = readFileSync(resolve(here, "../src/services/whatsapp/whatsapp.conversation.ts"), "utf8");
 const schedulingSource = readFileSync(resolve(here, "../src/services/scheduling.service.ts"), "utf8");
+const conversationAISource = readFileSync(resolve(here, "../src/services/ai/ConversationAI.ts"), "utf8");
 
 function extractSwitchCase(source, caseName) {
   const marker = `case "${caseName}":`;
@@ -41,10 +42,25 @@ test("greeting after completed booking starts from idle", () => {
     conversationSource.indexOf("async function handleSlotSelection"),
     conversationSource.indexOf("async function handleCheckAppointment"),
   );
+  const idleHandler = conversationSource.slice(
+    conversationSource.indexOf("async function handleIdleIntent"),
+    conversationSource.indexOf("async function handleConversationState"),
+  );
 
   assert.match(slotHandler, /nextState:\s*"idle"/);
   assert.match(conversationSource, /case "idle":[\s\S]*detectIntent\(/);
-  assert.match(conversationSource, /intent === "greeting"[\s\S]*nextState:\s*"awaiting_menu_selection"/);
+  assert.match(idleHandler, /intent === "greeting"[\s\S]*nextState:\s*"idle"/);
+});
+
+test("WhatsApp welcome is natural and does not force a deterministic menu", () => {
+  const welcomeBuilder = conversationSource.slice(
+    conversationSource.indexOf("function buildWelcome"),
+    conversationSource.indexOf("function formatDateTime"),
+  );
+
+  assert.match(welcomeBuilder, /How can I help you today\?/);
+  assert.doesNotMatch(welcomeBuilder, /Reply with a number/);
+  assert.doesNotMatch(welcomeBuilder, /1\. Book Appointment/);
 });
 
 test("duplicate webhook messages are ignored before side effects", () => {
@@ -89,4 +105,49 @@ test("clinic closed and slot occupied validation are owned by SchedulingService"
   assert.match(schedulingSource, /getClinicSchedulingSettings/);
   assert.match(schedulingSource, /doctorAvailabilityTable/);
   assert.match(conversationSource, /validateAppointmentSlot/);
+});
+
+test("idle WhatsApp intent detection is routed through backend ConversationAI", () => {
+  const idleCase = conversationSource.slice(
+    conversationSource.indexOf('case "idle":'),
+    conversationSource.indexOf("return handleIdleIntent", conversationSource.indexOf('case "idle":')),
+  );
+
+  assert.match(idleCase, /conversationAI\.interpretWhatsAppMessage/);
+  assert.match(idleCase, /fallbackIntent:\s*fallbackIntent/);
+  assert.match(idleCase, /AI_INTENT_DETECTED/);
+});
+
+test("AI receptionist supports patient service domains beyond appointments", () => {
+  for (const intent of ["registration", "doctor_availability", "arrival_guidance", "clinic_capabilities", "queue_status", "referral", "laboratory", "prescription", "billing", "follow_up", "emergency"]) {
+    assert.match(conversationAISource, new RegExp(`"${intent}"`));
+    assert.match(conversationSource, new RegExp(`"${intent}"`));
+  }
+});
+
+test("AI receptionist business actions stay in WhatsApp engine and Workflow Engine", () => {
+  assert.match(conversationSource, /workflowAI\.process\(WorkflowEvent\.APPOINTMENT_BOOKED/);
+  assert.match(conversationSource, /handleDoctorAvailability/);
+  assert.match(conversationSource, /handleArrivalGuidance/);
+  assert.match(conversationSource, /handleClinicCapabilities/);
+  assert.match(conversationSource, /handleQueueStatus/);
+  assert.match(conversationSource, /handleReferralGuidance/);
+  assert.match(conversationSource, /handleLaboratoryQuestion/);
+  assert.match(conversationSource, /handlePrescriptionQuestion/);
+  assert.match(conversationSource, /handleBillingQuestion/);
+  assert.match(conversationSource, /handleFollowUp/);
+});
+
+test("AI receptionist uses conversation memory and richer operational guidance", () => {
+  assert.match(conversationAISource, /inferFromMemory/);
+  assert.match(conversationSource, /\.limit\(12\)/);
+  assert.match(conversationSource, /estimated wait is/);
+  assert.match(conversationSource, /recommend arriving around/);
+});
+
+test("ConversationAI does not own database writes or workflow side effects", () => {
+  assert.doesNotMatch(conversationAISource, /@workspace\/db/);
+  assert.doesNotMatch(conversationAISource, /\.insert\(/);
+  assert.doesNotMatch(conversationAISource, /\.update\(/);
+  assert.doesNotMatch(conversationAISource, /\.delete\(/);
 });

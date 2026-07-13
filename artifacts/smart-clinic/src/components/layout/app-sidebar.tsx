@@ -33,6 +33,7 @@ import {
   Truck,
   Wifi,
   BarChart2,
+  Send,
 } from "lucide-react";
 import { useListNotifications, getListNotificationsQueryKey } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,7 @@ const navItems: NavItem[] = [
   { name: "Patients",         href: "/patients",          icon: Users,           roles: ["clinic_admin", "doctor", "nurse", "receptionist", "cashier"] },
   { name: "Appointments",     href: "/appointments",      icon: Calendar,        roles: ["clinic_admin", "doctor", "receptionist"] },
   { name: "Billing",          href: "/billing",           icon: Receipt,         roles: ["clinic_admin", "cashier", "receptionist"], billingRequired: true, clinicTypeExclude: ["government"] },
+  { name: "Referrals",        href: "/referrals",         icon: Send,            roles: ["clinic_admin", "doctor", "nurse", "receptionist"] },
   { name: "Pharmacy",         href: "/pharmacy",          icon: Pill,            roles: ["clinic_admin", "pharmacist", "nurse"],                                                        clinicTypeExclude: ["government"] },
   { name: "Laboratory",       href: "/lab",               icon: FlaskConical,    roles: ["clinic_admin", "lab_technician", "doctor"],                                                   clinicTypeExclude: ["government"] },
   { name: "Inventory",        href: "/inventory",         icon: Package,         roles: ["clinic_admin", "pharmacist"],                                                                 clinicTypeExclude: ["government"] },

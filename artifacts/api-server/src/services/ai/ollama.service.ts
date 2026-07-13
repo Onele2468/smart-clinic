@@ -1,5 +1,3 @@
-const OLLAMA_URL = `${process.env.OLLAMA_URL}/api/generate`;
-
 const MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:3b";
 
 export interface OllamaRequest {
@@ -14,7 +12,12 @@ export interface OllamaResponse {
 export async function generateWithOllama(
   prompt: string,
 ): Promise<OllamaResponse> {
-  const response = await fetch(OLLAMA_URL, {
+  if (!process.env.OLLAMA_URL) {
+    throw new Error("OLLAMA_URL is not configured");
+  }
+
+  const ollamaUrl = `${process.env.OLLAMA_URL.replace(/\/$/, "")}/api/generate`;
+  const response = await fetch(ollamaUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

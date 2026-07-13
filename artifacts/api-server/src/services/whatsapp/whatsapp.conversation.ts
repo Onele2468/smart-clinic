@@ -4,12 +4,19 @@ import {
   appointmentsTable,
   clinicBotSettingsTable,
   clinicMembersTable,
+  clinicSettingsTable,
   clinicsTable,
   departmentsTable,
   doctorProfilesTable,
+  invoicesTable,
+  labRequestsTable,
+  labResultsTable,
   notificationsTable,
   patientsTable,
+  prescriptionsTable,
+  queueEntriesTable,
   receptionRequestsTable,
+  referralsTable,
   staffAvailabilityTable,
   usersTable,
   whatsappConversationsTable,
@@ -21,6 +28,10 @@ import { logger } from "../../lib/logger";
 import { logActivity, logActivityAsync } from "../../lib/activityLogger";
 import { deliverPatientWhatsAppMessage, normalizePhoneNumber } from "./whatsapp.service";
 import type { ClinicWhatsAppConfig } from "./whatsapp.types";
+import { conversationAI } from "../ai/ConversationAI";
+import { workflowAI } from "../ai/WorkflowAI";
+import type { AIConversationIntent, AIConversationMemoryMessage } from "../ai/types";
+import { WorkflowEvent } from "../../constants/workflowEvents";
 import {
   findAvailableSlots as findSchedulingAvailableSlots,
   getClinicSchedulingSettings,
@@ -64,14 +75,25 @@ export type ConversationState =
 
 type Intent =
   | "greeting"
+  | "registration"
   | "book_appointment"
   | "check_appointment"
   | "cancel_appointment"
   | "clinic_hours"
   | "my_doctor"
+  | "doctor_availability"
+  | "arrival_guidance"
+  | "clinic_capabilities"
+  | "queue_status"
+  | "referral"
+  | "laboratory"
+  | "prescription"
+  | "billing"
+  | "follow_up"
   | "speak_to_reception"
   | "medicine"
   | "missed_appointment"
+  | "emergency"
   | "unknown";
 
 type EngineConfig = ClinicWhatsAppConfig & { clinicName: string };
@@ -154,32 +176,34 @@ function detectIntent(text: string): Intent {
   if (["4", "hours"].includes(normalized)) return "clinic_hours";
   if (["5", "doctor"].includes(normalized)) return "my_doctor";
   if (["6", "reception", "help"].includes(normalized)) return "speak_to_reception";
+  if (/\b(register|registration|new patient|new file|clinic file|update my details|change my details)\b/.test(normalized)) return "registration";
   if (isGreeting(normalized)) return "greeting";
+  if (/\b(follow-up|follow up|review appointment|review visit|post[- ]?visit|check[- ]?up|recovery check)\b/.test(normalized)) return "follow_up";
   if (/\b(book|appointment|see a doctor|consult|clinic visit|my child is sick|sick|flu|cough|fever|headache|pain)\b/.test(normalized)) {
     return "book_appointment";
   }
   if (/\b(cancel|call off|cannot come|can't come|reschedule)\b/.test(normalized)) return "cancel_appointment";
   if (/\b(when.*open|open|close|hours|time.*clinic)\b/.test(normalized)) return "clinic_hours";
   if (/\b(my doctor|who is my doctor|assigned doctor)\b/.test(normalized)) return "my_doctor";
+  if (/\b(doctor.*available|available doctor|when.*doctor|doctor.*free|next available|who can see me)\b/.test(normalized)) return "doctor_availability";
+  if (/\b(when should i arrive|what time should i come|come early|arrival|should i come now|when must i come|get there)\b/.test(normalized)) return "arrival_guidance";
+  if (/\b(what services|do you offer|can you do|available services|capabilities|do you have|is .* available)\b/.test(normalized)) return "clinic_capabilities";
   if (/\b(reception|receptionist|speak to someone|human|help|call me|urgent)\b/.test(normalized)) return "speak_to_reception";
   if (/\b(check.*appointment|when.*appointment|next appointment)\b/.test(normalized)) return "check_appointment";
-  if (/\b(medicine|medication|pills|prescription|repeat script)\b/.test(normalized)) return "medicine";
+  if (/\b(queue|waiting|ticket|how long|called yet|my turn|where am i)\b/.test(normalized)) return "queue_status";
+  if (/\b(referral|refer|specialist|transfer|referral letter|referred)\b/.test(normalized)) return "referral";
+  if (/\b(lab|laboratory|blood|urine|sample|test result|results|x-ray|scan)\b/.test(normalized)) return "laboratory";
+  if (/\b(prescription|repeat script|script|pharmacy|collect.*medicine|medication|medicine|pills)\b/.test(normalized)) return "prescription";
+  if (/\b(bill|billing|invoice|payment|pay|paid|balance|account|receipt|medical aid|cost|price)\b/.test(normalized)) return "billing";
   if (/\b(missed|miss)\b.*\bappointment\b/.test(normalized)) return "missed_appointment";
   return "unknown";
 }
 
 function buildWelcome(clinicName: string, custom?: string | null): string {
-  const greeting = custom?.trim() || "Hello. How can I help you today?";
+  const greeting = custom?.trim() || `Hello, you have reached ${clinicName}.`;
   return `${greeting}
 
-1. Book Appointment
-2. Check Appointment
-3. Cancel Appointment
-4. Clinic Hours
-5. My Doctor
-6. Speak To Reception
-
-Reply with a number.`;
+How can I help you today? You can ask me about appointments, the queue, registration, referrals, lab results, prescriptions, billing, clinic hours, or reception support.`;
 }
 
 function formatDateTime(date: Date, timeZone: string): string {
@@ -209,6 +233,21 @@ function formatTime(date: Date, timeZone: string): string {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+function friendlyMinutes(minutes: number): string {
+  if (minutes <= 0) return "a few minutes";
+  if (minutes < 60) return `about ${minutes} minute${minutes === 1 ? "" : "s"}`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (remainder === 0) return `about ${hours} hour${hours === 1 ? "" : "s"}`;
+  return `about ${hours} hour${hours === 1 ? "" : "s"} ${remainder} minute${remainder === 1 ? "" : "s"}`;
+}
+
+function clinicTypeLabel(type: string | null | undefined): string {
+  if (type === "government") return "government clinic";
+  if (type === "ngo") return "community clinic";
+  return "clinic";
 }
 
 function parseJsonObject(value: unknown): Record<string, unknown> {
@@ -443,6 +482,26 @@ async function storeChatMessage(params: {
     throw err;
   }
   return true;
+}
+
+async function loadConversationMemory(conversationId: string): Promise<AIConversationMemoryMessage[]> {
+  const rows = await db
+    .select({
+      direction: whatsappMessagesTable.direction,
+      messageText: whatsappMessagesTable.messageText,
+      bodyPreview: whatsappMessagesTable.bodyPreview,
+      createdAt: whatsappMessagesTable.createdAt,
+    })
+    .from(whatsappMessagesTable)
+    .where(eq(whatsappMessagesTable.conversationId, conversationId))
+    .orderBy(desc(whatsappMessagesTable.createdAt))
+    .limit(12);
+
+  return rows.reverse().map((row) => ({
+    direction: row.direction === "inbound" ? "inbound" : "outbound",
+    text: row.messageText ?? row.bodyPreview ?? "",
+    createdAt: row.createdAt,
+  }));
 }
 
 async function resolvePatientByPhone(clinicId: string, phone: string) {
@@ -1012,6 +1071,14 @@ Please reply with the number you prefer.`,
     entityId: appointment.id,
     suppressWhatsAppDispatch: true,
   });
+  await workflowAI.process(WorkflowEvent.APPOINTMENT_BOOKED, {
+    clinicId: params.clinicId,
+    patientId: params.patientId,
+    appointmentId: appointment.id,
+    doctorId: slot.doctorId,
+    scheduledAt,
+    source: "whatsapp_ai_reception",
+  });
 
   const [patient] = await db
     .select({ primaryDoctorId: patientsTable.primaryDoctorId })
@@ -1260,6 +1327,386 @@ ${lines.join("\n")}`;
 You can also phone us on ${clinic?.contactNumber ?? "the clinic number"}.`;
 }
 
+async function handleRegistration(params: {
+  clinicId: string;
+  patientId?: string | null;
+  conversationId: string;
+  messageText: string;
+}) {
+  await handleReception({
+    clinicId: params.clinicId,
+    patientId: params.patientId,
+    conversationId: params.conversationId,
+    messageText: params.messageText || "Patient needs registration support",
+  });
+  return "I can help start that. For privacy and accuracy, reception will complete registration or update your details with you. Please have your ID or clinic card ready when they contact you.";
+}
+
+async function estimateQueueWaitMinutes(clinicId: string, ahead: number, today: Date) {
+  const [completed] = await db
+    .select({ avgMinutes: sql<number>`avg(extract(epoch from (${queueEntriesTable.completedAt} - ${queueEntriesTable.createdAt})) / 60)` })
+    .from(queueEntriesTable)
+    .where(
+      and(
+        eq(queueEntriesTable.clinicId, clinicId),
+        eq(queueEntriesTable.status, "completed"),
+        sql`${queueEntriesTable.createdAt} >= ${today.toISOString()}`,
+        sql`${queueEntriesTable.completedAt} is not null`,
+      ),
+    );
+  const averageCompletedMinutes = Number(completed?.avgMinutes ?? 0);
+  const perPatientMinutes = Number.isFinite(averageCompletedMinutes) && averageCompletedMinutes > 0
+    ? Math.min(30, Math.max(8, Math.round(averageCompletedMinutes)))
+    : 12;
+  return Math.max(5, ahead * perPatientMinutes + 10);
+}
+
+async function handleQueueStatus(clinicId: string, patientId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [entry] = await db
+    .select()
+    .from(queueEntriesTable)
+    .where(
+      and(
+        eq(queueEntriesTable.clinicId, clinicId),
+        eq(queueEntriesTable.patientId, patientId),
+        sql`${queueEntriesTable.createdAt} >= ${today.toISOString()}`,
+      ),
+    )
+    .orderBy(desc(queueEntriesTable.createdAt))
+    .limit(1);
+
+  if (!entry) {
+    return "I could not find you in today's clinic queue. If you are at the clinic, please check with reception so they can confirm your ticket.";
+  }
+
+  const [waitingAhead] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(queueEntriesTable)
+    .where(
+      and(
+        eq(queueEntriesTable.clinicId, clinicId),
+        eq(queueEntriesTable.status, "waiting"),
+        sql`${queueEntriesTable.createdAt} >= ${today.toISOString()}`,
+        sql`${queueEntriesTable.createdAt} < ${entry.createdAt}`,
+      ),
+    );
+
+  const stageLabels: Record<string, string> = {
+    waiting: "waiting to be called",
+    nurse_assessment: "with the nurse assessment team",
+    doctor_consultation: "with the doctor consultation team",
+    laboratory: "at the laboratory stage",
+    pharmacy: "at the pharmacy stage",
+    completed: "completed",
+    skipped: "skipped",
+  };
+  const status = stageLabels[entry.status] ?? entry.status.replace(/_/g, " ");
+  const ahead = Number(waitingAhead?.count ?? 0);
+  const estimatedWait = await estimateQueueWaitMinutes(clinicId, ahead, today);
+  const waitLine = entry.status === "waiting"
+    ? `There ${ahead === 1 ? "is" : "are"} ${ahead} patient${ahead === 1 ? "" : "s"} waiting ahead of you. Based on the current queue, the estimated wait is ${friendlyMinutes(estimatedWait)}. Emergency cases can change this.`
+    : "Reception or clinical staff will guide you through the next step.";
+  return `Your queue ticket is ${entry.ticketNumber}.
+
+Current stage: ${status}.
+${waitLine}`;
+}
+
+async function handleClinicCapabilities(clinicId: string) {
+  const [clinic] = await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
+  const [settings] = await db.select().from(clinicSettingsTable).where(eq(clinicSettingsTable.clinicId, clinicId)).limit(1);
+  const botSettings = await getBotSettings(clinicId);
+  const supported: string[] = [];
+
+  if (botSettings?.bookingEnabled && settings?.onlineBookingEnabled) supported.push("appointment booking");
+  if (settings?.allowWalkins) supported.push("walk-in visits");
+  supported.push("queue updates");
+  supported.push("referral guidance");
+  supported.push("laboratory workflow updates");
+  supported.push("prescription and pharmacy guidance");
+  if (clinic?.billingEnabled) supported.push("billing and invoice support");
+
+  const unavailable: string[] = [];
+  if (!clinic?.billingEnabled) unavailable.push("billing is not enabled for this clinic");
+  if (!settings?.onlineBookingEnabled || !botSettings?.bookingEnabled) unavailable.push("online appointment booking may need reception assistance");
+
+  return `${clinic?.name ?? "This clinic"} is configured as a ${clinicTypeLabel(clinic?.clinicType)}.
+
+I can help with ${supported.join(", ")}.
+${unavailable.length ? `\nA quick note: ${unavailable.join("; ")}.` : ""}
+
+For anything clinical, a nurse, doctor, laboratory staff member, or pharmacist will make the final decision.`;
+}
+
+async function handleDoctorAvailability(params: {
+  clinicId: string;
+  patientId?: string | null;
+  conversationId: string;
+  messageText: string;
+  phone: string;
+}) {
+  const patient = await requirePatient({
+    clinicId: params.clinicId,
+    conversationId: params.conversationId,
+    currentState: "idle",
+    messageText: params.messageText,
+    intent: "doctor_availability",
+    phone: params.phone,
+    patientId: params.patientId,
+  });
+  if (patient.reply) return { reply: patient.reply, patientId: params.patientId };
+
+  const slots = await findSlotsForPatientDepartment({
+    clinicId: params.clinicId,
+    patientId: patient.patientId!,
+    departmentName: mapDepartmentFromReason(params.messageText),
+    limit: 3,
+  });
+  if (slots.length === 0) {
+    await handleReception({
+      clinicId: params.clinicId,
+      patientId: patient.patientId,
+      conversationId: params.conversationId,
+      messageText: params.messageText,
+    });
+    return {
+      reply: "I cannot see an open doctor slot right now. I have asked reception to help check availability and follow up with you.",
+      patientId: patient.patientId,
+    };
+  }
+
+  const timeZone = await getClinicTimezone(params.clinicId);
+  const slotList = slots
+    .map((slot, index) => `${index + 1}. Dr ${slot.doctorName}, ${formatDate(new Date(slot.scheduledAt), timeZone)} at ${formatTime(new Date(slot.scheduledAt), timeZone)}`)
+    .join("\n");
+  return {
+    reply: `These are the next doctor times I can see:
+
+${slotList}
+
+If you would like to book one, reply with the appointment number.`,
+    patientId: patient.patientId,
+    data: { departmentName: mapDepartmentFromReason(params.messageText), slots },
+  };
+}
+
+async function handleArrivalGuidance(clinicId: string, patientId: string) {
+  const appointment = await getUpcomingAppointment(clinicId, patientId);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [waiting] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(queueEntriesTable)
+    .where(and(eq(queueEntriesTable.clinicId, clinicId), eq(queueEntriesTable.status, "waiting"), sql`${queueEntriesTable.createdAt} >= ${today.toISOString()}`));
+  const waitingCount = Number(waiting?.count ?? 0);
+  const recommendedBuffer = waitingCount >= 10 ? 30 : waitingCount >= 5 ? 20 : 15;
+
+  if (!appointment) {
+    return `I cannot see an upcoming appointment on your file.
+
+If you are feeling very unwell or it may be urgent, please come in now or seek emergency care. Otherwise, reception can confirm whether a walk-in visit is possible today.`;
+  }
+
+  const scheduledAt = new Date(appointment.scheduledAt);
+  const timeZone = await getClinicTimezone(clinicId);
+  const arrivalAt = new Date(scheduledAt.getTime() - recommendedBuffer * 60_000);
+  return `Your appointment is ${formatDate(scheduledAt, timeZone)} at ${formatTime(scheduledAt, timeZone)} with Dr ${appointment.doctorName}.
+
+Based on the current clinic flow, I recommend arriving around ${formatTime(arrivalAt, timeZone)} (${recommendedBuffer} minutes early). Please bring your ID or clinic card. If your symptoms become urgent, do not wait for the appointment time.`;
+}
+
+async function handleFollowUp(params: {
+  clinicId: string;
+  patientId: string;
+  conversationId: string;
+  currentState: string;
+  messageText: string;
+  intent?: Intent | null;
+}) {
+  const [followUp] = await db
+    .select({
+      id: appointmentsTable.id,
+      doctorName: usersTable.name,
+      scheduledAt: appointmentsTable.scheduledAt,
+      visitReason: appointmentsTable.visitReason,
+      type: appointmentsTable.type,
+    })
+    .from(appointmentsTable)
+    .innerJoin(usersTable, eq(appointmentsTable.doctorId, usersTable.id))
+    .where(
+      and(
+        eq(appointmentsTable.clinicId, params.clinicId),
+        eq(appointmentsTable.patientId, params.patientId),
+        gte(appointmentsTable.scheduledAt, new Date()),
+        inArray(appointmentsTable.status, ACTIVE_APPOINTMENT_STATUSES),
+        or(eq(appointmentsTable.type, "follow_up"), sql`${appointmentsTable.visitReason} ilike ${"%follow%"}`),
+      ),
+    )
+    .orderBy(asc(appointmentsTable.scheduledAt))
+    .limit(1);
+
+  if (followUp) {
+    const scheduledAt = new Date(followUp.scheduledAt);
+    const timeZone = await getClinicTimezone(params.clinicId);
+    return {
+      reply: `You have a follow-up appointment booked.
+
+Doctor: Dr ${followUp.doctorName}
+Date: ${formatDate(scheduledAt, timeZone)}
+Time: ${formatTime(scheduledAt, timeZone)}
+
+Please follow the instructions your clinician gave you. If your symptoms are getting worse, contact the clinic sooner or seek urgent care.`,
+      nextState: "idle" as ConversationState,
+      patientId: params.patientId,
+      intent: params.intent ?? null,
+      data: {},
+    };
+  }
+
+  const normalized = normalizeForIntent(params.messageText);
+  if (/\b(book|schedule|make|need|want)\b/.test(normalized)) {
+    return handleBook({
+      clinicId: params.clinicId,
+      patientId: params.patientId,
+      conversationId: params.conversationId,
+      currentState: params.currentState,
+      messageText: params.messageText,
+      intent: params.intent,
+    });
+  }
+
+  return {
+    reply: "I cannot see a follow-up appointment booked yet. If your doctor asked you to return, I can help book it. Tell me briefly what the follow-up is for.",
+    nextState: "awaiting_booking_reason" as ConversationState,
+    patientId: params.patientId,
+    intent: params.intent ?? null,
+    data: { visitReason: "Follow-up visit" },
+  };
+}
+
+async function handleReferralGuidance(params: {
+  clinicId: string;
+  patientId: string;
+  conversationId: string;
+  messageText: string;
+}) {
+  const [referral] = await db
+    .select()
+    .from(referralsTable)
+    .where(and(eq(referralsTable.clinicId, params.clinicId), eq(referralsTable.patientId, params.patientId)))
+    .orderBy(desc(referralsTable.createdAt))
+    .limit(1);
+
+  if (!referral) {
+    await handleReception(params);
+    return "I could not find an active referral on your file. Reception has been notified and will help check whether a referral needs to be created or followed up.";
+  }
+
+  return `Your latest referral is for ${referral.specialty ?? referral.destinationName}.
+
+Destination: ${referral.destinationName}
+Status: ${referral.status.replace(/_/g, " ")}
+Urgency: ${referral.urgency}
+
+If you need the referral letter resent or need directions, reception can help with that.`;
+}
+
+async function handleLaboratoryQuestion(params: {
+  clinicId: string;
+  patientId: string;
+  conversationId: string;
+  messageText: string;
+}) {
+  const [result] = await db
+    .select()
+    .from(labResultsTable)
+    .where(and(eq(labResultsTable.clinicId, params.clinicId), eq(labResultsTable.patientId, params.patientId)))
+    .orderBy(desc(labResultsTable.createdAt))
+    .limit(1);
+
+  if (result) {
+    await handleReception(params);
+    return `Your latest laboratory result for ${result.testName} is marked ${result.status}.
+
+I have asked reception to arrange clinical follow-up, because results should be explained by your healthcare team.`;
+  }
+
+  const [request] = await db
+    .select()
+    .from(labRequestsTable)
+    .where(and(eq(labRequestsTable.clinicId, params.clinicId), eq(labRequestsTable.patientId, params.patientId)))
+    .orderBy(desc(labRequestsTable.createdAt))
+    .limit(1);
+
+  if (!request) {
+    return "I could not find a laboratory request on your file. If a clinician asked you to do tests, reception can check the details for you.";
+  }
+
+  return `Your latest laboratory request is for ${request.testName}.
+
+Status: ${request.status.replace(/_/g, " ")}
+Urgency: ${request.urgency}
+
+The laboratory or reception team can confirm sample instructions and collection times.`;
+}
+
+async function handlePrescriptionQuestion(params: {
+  clinicId: string;
+  patientId: string;
+  conversationId: string;
+  messageText: string;
+}) {
+  const [prescription] = await db
+    .select()
+    .from(prescriptionsTable)
+    .where(and(eq(prescriptionsTable.clinicId, params.clinicId), eq(prescriptionsTable.patientId, params.patientId)))
+    .orderBy(desc(prescriptionsTable.createdAt))
+    .limit(1);
+
+  if (!prescription) {
+    await handleReception(params);
+    return "I could not find a prescription on your file. Reception has been notified so pharmacy or your clinician can help.";
+  }
+
+  return `Your latest prescription is ${prescription.medicationName}.
+
+Status: ${prescription.status.replace(/_/g, " ")}
+Instructions on file: ${prescription.instructions ?? "Please follow the label and pharmacist's instructions."}
+
+For side effects, dose changes, or whether you should take it with another medicine, please speak to the pharmacist or clinician before making any changes.`;
+}
+
+async function handleBillingQuestion(params: {
+  clinicId: string;
+  patientId: string;
+  conversationId: string;
+  messageText: string;
+}) {
+  const [invoice] = await db
+    .select()
+    .from(invoicesTable)
+    .where(and(eq(invoicesTable.clinicId, params.clinicId), eq(invoicesTable.patientId, params.patientId)))
+    .orderBy(desc(invoicesTable.createdAt))
+    .limit(1);
+
+  if (!invoice) {
+    await handleReception(params);
+    return "I could not find an invoice on your file. Reception has been notified and can help with your account or receipt.";
+  }
+
+  const due = invoice.dueDate ? `\nDue date: ${formatDate(new Date(invoice.dueDate), await getClinicTimezone(params.clinicId))}` : "";
+  return `Your latest invoice is ${invoice.invoiceCode}.
+
+Status: ${invoice.status}
+Total: R${invoice.totalAmount}
+Paid: R${invoice.paidAmount}
+Balance: R${invoice.balance}${due}
+
+For payment links, receipts, or medical aid queries, reception can assist.`;
+}
+
 async function handleReception(params: {
   clinicId: string;
   patientId?: string | null;
@@ -1450,10 +1897,41 @@ async function handleIdleIntent(params: {
 }): Promise<StateMachineResult> {
   const intent = params.intent;
 
+  if (intent === "emergency") {
+    await handleReception({
+      clinicId: params.config.clinicId,
+      patientId: params.patientId,
+      conversationId: params.conversationId,
+      messageText: params.messageText,
+    });
+    return {
+      reply: "This may be urgent. Please go to the nearest emergency department or call local emergency services now. I have also asked reception to follow up.",
+      nextState: "idle",
+      patientId: params.patientId,
+      intent,
+      data: {},
+    };
+  }
+
   if (intent === "greeting") {
     return {
       reply: buildWelcome(params.config.clinicName, params.settings?.welcomeMessage),
-      nextState: "awaiting_menu_selection",
+      nextState: "idle",
+      patientId: params.patientId,
+      intent,
+      data: {},
+    };
+  }
+
+  if (intent === "registration") {
+    return {
+      reply: await handleRegistration({
+        clinicId: params.config.clinicId,
+        patientId: params.patientId,
+        conversationId: params.conversationId,
+        messageText: params.messageText,
+      }),
+      nextState: "idle",
       patientId: params.patientId,
       intent,
       data: {},
@@ -1551,6 +2029,10 @@ async function handleIdleIntent(params: {
     return { reply: await handleClinicHours(params.config.clinicId), nextState: "idle", patientId: params.patientId, intent, data: {} };
   }
 
+  if (intent === "clinic_capabilities") {
+    return { reply: await handleClinicCapabilities(params.config.clinicId), nextState: "idle", patientId: params.patientId, intent, data: {} };
+  }
+
   if (intent === "my_doctor") {
     if (params.settings && !params.settings.selfServiceEnabled) {
       const reply = await handleReception({
@@ -1575,7 +2057,127 @@ async function handleIdleIntent(params: {
     return { reply: await handleMyDoctor(params.config.clinicId, patient.patientId!), nextState: "idle", patientId: patient.patientId, intent, data: {} };
   }
 
-  if (intent === "speak_to_reception" || intent === "medicine" || intent === "missed_appointment") {
+  if (intent === "doctor_availability") {
+    if (params.settings && !params.settings.bookingEnabled) {
+      const reply = await handleReception({
+        clinicId: params.config.clinicId,
+        patientId: params.patientId,
+        conversationId: params.conversationId,
+        messageText: params.messageText,
+      });
+      return { reply, nextState: "idle", patientId: params.patientId, intent, data: {} };
+    }
+    const availability = await handleDoctorAvailability({
+      clinicId: params.config.clinicId,
+      patientId: params.patientId,
+      conversationId: params.conversationId,
+      messageText: params.messageText,
+      phone: params.phone,
+    });
+    return {
+      reply: availability.reply,
+      nextState: availability.data ? "awaiting_booking_slot_selection" : "idle",
+      patientId: availability.patientId,
+      intent,
+      data: availability.data ?? {},
+    };
+  }
+
+  if (intent === "queue_status" || intent === "arrival_guidance" || intent === "referral" || intent === "laboratory" || intent === "prescription" || intent === "billing" || intent === "medicine" || intent === "follow_up") {
+    if (params.settings && !params.settings.selfServiceEnabled) {
+      const reply = await handleReception({
+        clinicId: params.config.clinicId,
+        patientId: params.patientId,
+        conversationId: params.conversationId,
+        messageText: params.messageText,
+      });
+      return { reply, nextState: "idle", patientId: params.patientId, intent, data: {} };
+    }
+
+    const patient = await requirePatient({
+      clinicId: params.config.clinicId,
+      conversationId: params.conversationId,
+      currentState: params.currentState,
+      messageText: params.messageText,
+      intent,
+      phone: params.phone,
+      patientId: params.patientId,
+    });
+    if (patient.reply) return { reply: patient.reply, nextState: patient.state ?? "awaiting_id_number", patientId: params.patientId, intent, data: {} };
+
+    if (intent === "queue_status") {
+      return { reply: await handleQueueStatus(params.config.clinicId, patient.patientId!), nextState: "idle", patientId: patient.patientId, intent, data: {} };
+    }
+    if (intent === "arrival_guidance") {
+      return { reply: await handleArrivalGuidance(params.config.clinicId, patient.patientId!), nextState: "idle", patientId: patient.patientId, intent, data: {} };
+    }
+    if (intent === "follow_up") {
+      return handleFollowUp({
+        clinicId: params.config.clinicId,
+        patientId: patient.patientId!,
+        conversationId: params.conversationId,
+        currentState: params.currentState,
+        messageText: params.messageText,
+        intent,
+      });
+    }
+    if (intent === "referral") {
+      return {
+        reply: await handleReferralGuidance({
+          clinicId: params.config.clinicId,
+          patientId: patient.patientId!,
+          conversationId: params.conversationId,
+          messageText: params.messageText,
+        }),
+        nextState: "idle",
+        patientId: patient.patientId,
+        intent,
+        data: {},
+      };
+    }
+    if (intent === "laboratory") {
+      return {
+        reply: await handleLaboratoryQuestion({
+          clinicId: params.config.clinicId,
+          patientId: patient.patientId!,
+          conversationId: params.conversationId,
+          messageText: params.messageText,
+        }),
+        nextState: "idle",
+        patientId: patient.patientId,
+        intent,
+        data: {},
+      };
+    }
+    if (intent === "billing") {
+      return {
+        reply: await handleBillingQuestion({
+          clinicId: params.config.clinicId,
+          patientId: patient.patientId!,
+          conversationId: params.conversationId,
+          messageText: params.messageText,
+        }),
+        nextState: "idle",
+        patientId: patient.patientId,
+        intent,
+        data: {},
+      };
+    }
+    return {
+      reply: await handlePrescriptionQuestion({
+        clinicId: params.config.clinicId,
+        patientId: patient.patientId!,
+        conversationId: params.conversationId,
+        messageText: params.messageText,
+      }),
+      nextState: "idle",
+      patientId: patient.patientId,
+      intent,
+      data: {},
+    };
+  }
+
+  if (intent === "speak_to_reception" || intent === "missed_appointment") {
     const reply = await handleReception({
       clinicId: params.config.clinicId,
       patientId: params.patientId,
@@ -1587,7 +2189,7 @@ async function handleIdleIntent(params: {
 
   return {
     reply: buildWelcome(params.config.clinicName, params.settings?.welcomeMessage),
-    nextState: "awaiting_menu_selection",
+    nextState: "idle",
     patientId: params.patientId,
     intent,
     data: {},
@@ -1765,7 +2367,17 @@ async function handleConversationState(params: {
       return { reply: buildWelcome(params.config.clinicName, params.settings?.welcomeMessage), nextState: "awaiting_menu_selection", patientId: params.patientId, intent: null, data: {} };
     case "idle":
     default: {
-      const intent = detectIntent(params.messageText);
+      const fallbackIntent = detectIntent(params.messageText);
+      const aiDecision = await conversationAI.interpretWhatsAppMessage({
+        clinicId: params.config.clinicId,
+        clinicName: params.config.clinicName,
+        currentState: params.currentState,
+        patientId: params.patientId,
+        messageText: params.messageText,
+        recentMessages: await loadConversationMemory(params.conversationId),
+        fallbackIntent: fallbackIntent as AIConversationIntent,
+      });
+      const intent = aiDecision.intent as Intent;
       logger.info(
         {
           clinicId: params.config.clinicId,
@@ -1773,10 +2385,30 @@ async function handleConversationState(params: {
           patientId: params.patientId ?? null,
           currentState: params.currentState,
           intent,
+          fallbackIntent,
+          aiConfidence: aiDecision.confidence.score,
+          aiConfidenceLevel: aiDecision.confidence.level,
+          aiSource: aiDecision.source,
+          aiSafety: aiDecision.safety,
           messageId: params.messageId ?? null,
         },
-        "INTENT_DETECTED",
+        "AI_INTENT_DETECTED",
       );
+      if (aiDecision.suggestedReply && intent === "emergency") {
+        await handleReception({
+          clinicId: params.config.clinicId,
+          patientId: params.patientId,
+          conversationId: params.conversationId,
+          messageText: params.messageText,
+        });
+        return {
+          reply: aiDecision.suggestedReply,
+          nextState: "idle",
+          patientId: params.patientId,
+          intent,
+          data: {},
+        };
+      }
       return handleIdleIntent({ ...params, intent });
     }
   }

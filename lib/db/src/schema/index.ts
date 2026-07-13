@@ -28,3 +28,4 @@ export * from "./reception_requests";
 export * from "./departments";
 export * from "./doctor_profiles";
 export * from "./doctor_availability";
+export * from "./referrals";

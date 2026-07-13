@@ -49,6 +49,13 @@ payment_recorded: {
 
   // Inventory / suppliers
   supplier_restock: { type: "supplier_delivery", title: "Supplier Stock Delivery" },
+
+  // Referrals
+  referral_created: { type: "referral", title: "Referral Created" },
+  referral_accepted: { type: "referral", title: "Referral Accepted" },
+  referral_rejected: { type: "referral", title: "Referral Rejected" },
+  referral_completed: { type: "referral", title: "Referral Completed" },
+  referral_cancelled: { type: "referral", title: "Referral Cancelled" },
 };
 
 export function getClinicNotificationMeta(actionType: string | null | undefined): ClinicNotificationMeta | null {

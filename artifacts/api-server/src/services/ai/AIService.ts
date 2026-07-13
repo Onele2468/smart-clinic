@@ -1,39 +1,53 @@
+import { conversationAI } from "./ConversationAI";
 import { generateWithOllama } from "./ollama.service";
+import type { AIConversationMemoryMessage } from "./types";
 
 export class AIService {
-  /**
-   * General AI chat
-   */
   async chat(prompt: string) {
     return generateWithOllama(prompt);
   }
 
-  /**
-   * Summarize a doctor's consultation
-   */
+  async interpretWhatsAppMessage(input: {
+    clinicId: string;
+    clinicName: string;
+    currentState: string;
+    patientId?: string | null;
+    messageText: string;
+    recentMessages?: AIConversationMemoryMessage[];
+  }) {
+    return conversationAI.interpretWhatsAppMessage(input);
+  }
+
   async summarizeConsultation(data: unknown) {
-    throw new Error("Not implemented");
+    return generateWithOllama(JSON.stringify({
+      task: "summarize_consultation",
+      safety: "AI assists only. A clinician must review the summary.",
+      data,
+    }));
   }
 
-  /**
-   * Explain a prescription to a patient
-   */
   async explainMedication(data: unknown) {
-    throw new Error("Not implemented");
+    return generateWithOllama(JSON.stringify({
+      task: "explain_medication",
+      safety: "Do not prescribe, change dosage, or replace pharmacist counselling.",
+      data,
+    }));
   }
 
-  /**
-   * Explain laboratory results
-   */
   async explainLabResults(data: unknown) {
-    throw new Error("Not implemented");
+    return generateWithOllama(JSON.stringify({
+      task: "explain_lab_results",
+      safety: "Explain in plain language and instruct patient to discuss results with clinical staff.",
+      data,
+    }));
   }
 
-  /**
-   * Generate a notification or WhatsApp message
-   */
   async generateNotification(data: unknown) {
-    throw new Error("Not implemented");
+    return generateWithOllama(JSON.stringify({
+      task: "generate_notification",
+      safety: "Administrative messaging only. Do not include sensitive clinical detail unless explicitly supplied by an approved service.",
+      data,
+    }));
   }
 }
 

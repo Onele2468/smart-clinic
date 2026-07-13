@@ -18,7 +18,7 @@ import {
   getListLabRequestsQueryKey,
   getListAppointmentsQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, User, Phone, Mail, Calendar, Activity, Plus, Stethoscope, FileText, Pill, Heart, CreditCard, ShieldCheck, FlaskConical, Thermometer, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Calendar, Activity, Plus, Stethoscope, FileText, Pill, Heart, CreditCard, ShieldCheck, FlaskConical, Thermometer, Clock, CheckCircle2, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,6 +69,39 @@ const labRequestSchema = z.object({
   urgency: z.enum(["routine", "urgent", "stat"]).default("routine"),
   notes: z.string().optional(),
 });
+
+const BASE = import.meta.env.BASE_URL;
+const apiFetch = (path: string) =>
+  fetch(`${BASE}api${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    return data;
+  });
+
+type PatientReferral = {
+  id: string;
+  destinationName: string;
+  specialty?: string | null;
+  referralType: string;
+  urgency: string;
+  reason: string;
+  status: string;
+  referringDoctorName?: string | null;
+  createdAt: string;
+};
+
+const referralStatusColors: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-800 border-amber-200",
+  accepted: "bg-blue-100 text-blue-800 border-blue-200",
+  rejected: "bg-red-100 text-red-800 border-red-200",
+  completed: "bg-green-100 text-green-800 border-green-200",
+  cancelled: "bg-slate-100 text-slate-800 border-slate-200",
+};
 
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -112,6 +145,12 @@ export default function PatientDetail() {
     { query: { enabled: !!clinicId && !!id, queryKey: getListAppointmentsQueryKey(clinicId, {}) } }
   );
 
+  const { data: referrals, isLoading: referralsLoading } = useQuery<PatientReferral[]>({
+    queryKey: ["patient-referrals", clinicId, id],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/patients/${id}/referrals`),
+    enabled: !!clinicId && !!id,
+  });
+
   const patientAppointments = useMemo(
     () => (appointments ?? []).filter(a => a.patientId === id),
     [appointments, id]
@@ -125,8 +164,9 @@ export default function PatientDetail() {
     (labRequests ?? []).forEach(l => events.push({ type: "lab", date: l.createdAt, data: l }));
     (assessments ?? []).forEach(a => events.push({ type: "assessment", date: a.createdAt, data: a }));
     patientAppointments.forEach(a => events.push({ type: "appointment", date: a.scheduledAt, data: a }));
+    (referrals ?? []).forEach(r => events.push({ type: "referral", date: r.createdAt, data: r }));
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [notes, prescriptions, labRequests, assessments, patientAppointments]);
+  }, [notes, prescriptions, labRequests, assessments, patientAppointments, referrals]);
 
   const createNoteMutation = useCreateConsultationNote();
   const createPrescriptionMutation = useCreatePrescription();
@@ -462,6 +502,10 @@ export default function PatientDetail() {
             Lab Requests
             {labRequests && labRequests.length > 0 && <Badge variant="secondary" className="ml-2">{labRequests.length}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="referrals">
+            Referrals
+            {referrals && referrals.length > 0 && <Badge variant="secondary" className="ml-2">{referrals.length}</Badge>}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="emr" className="mt-4">
@@ -485,6 +529,7 @@ export default function PatientDetail() {
                     lab: { icon: FlaskConical, color: "bg-purple-100 text-purple-700 border-purple-200", label: "Lab Request" },
                     assessment: { icon: Activity, color: "bg-orange-100 text-orange-700 border-orange-200", label: "Nurse Assessment" },
                     appointment: { icon: Calendar, color: "bg-slate-100 text-slate-700 border-slate-200", label: "Appointment" },
+                    referral: { icon: Send, color: "bg-cyan-100 text-cyan-700 border-cyan-200", label: "Referral" },
                   }[type] ?? { icon: FileText, color: "bg-muted text-muted-foreground", label: type };
 
                   const Icon = typeConfig.icon;
@@ -521,6 +566,9 @@ export default function PatientDetail() {
                                 {type === "appointment" && (
                                   <span className="text-sm font-semibold capitalize">{data.type?.replace("_", " ")} · Dr. {data.doctorName}</span>
                                 )}
+                                {type === "referral" && (
+                                  <span className="text-sm font-semibold">{data.destinationName}</span>
+                                )}
                               </div>
                               <span className="text-xs text-muted-foreground shrink-0">{format(new Date(date), "MMM d, yyyy · h:mm a")}</span>
                             </div>
@@ -548,6 +596,17 @@ export default function PatientDetail() {
                             )}
                             {type === "appointment" && data.visitReason && (
                               <p className="mt-1 text-xs text-muted-foreground italic">"{data.visitReason}"</p>
+                            )}
+                            {type === "referral" && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-sm text-muted-foreground">{data.reason}</p>
+                                <div className="flex gap-2 flex-wrap">
+                                  <Badge variant="outline" className={`text-xs ${referralStatusColors[data.status] ?? ""}`}>{String(data.status).toUpperCase()}</Badge>
+                                  <Badge variant="outline" className="text-xs capitalize">{data.urgency}</Badge>
+                                  <Badge variant="outline" className="text-xs capitalize">{data.referralType}</Badge>
+                                </div>
+                                {data.referringDoctorName && <p className="text-xs">Dr. {data.referringDoctorName}</p>}
+                              </div>
                             )}
                           </CardContent>
                         </Card>
@@ -996,6 +1055,51 @@ export default function PatientDetail() {
                           Ordered by Dr. {req.doctorName ?? "Unknown"} · {format(new Date(req.createdAt), "MMM d, yyyy")}
                         </p>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="referrals" className="mt-4">
+          {referralsLoading ? (
+            <div className="space-y-3">
+              {[1, 2].map(i => <Skeleton key={i} className="h-28 w-full" />)}
+            </div>
+          ) : !referrals?.length ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <Send className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No referrals recorded yet</p>
+                <p className="text-sm mt-1">Patient referrals created from the referrals module will appear here.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {referrals.map(referral => (
+                <Card key={referral.id}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold">{referral.destinationName}</span>
+                          <Badge variant="outline" className={`text-xs ${referralStatusColors[referral.status] ?? ""}`}>
+                            {referral.status.toUpperCase()}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs capitalize">{referral.urgency}</Badge>
+                          <Badge variant="secondary" className="text-xs capitalize">{referral.referralType}</Badge>
+                        </div>
+                        {referral.specialty && <p className="text-xs text-muted-foreground">Specialty: {referral.specialty}</p>}
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{referral.reason}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {referral.referringDoctorName ? `Referred by Dr. ${referral.referringDoctorName}` : "Referring doctor not assigned"} - {format(new Date(referral.createdAt), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/referrals?referralId=${referral.id}`}>Open Referral</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

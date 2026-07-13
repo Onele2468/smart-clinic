@@ -1,10 +1,11 @@
 import { Router, type Request, type Response } from "express";
-import { generateWithOllama } from "../services/ai/ollama.service.js";
 import { logger } from "../lib/logger.js";
+import { requireAuth } from "../lib/auth.js";
+import { aiService } from "../services/ai/AIService.js";
 
 const router = Router();
 
-router.post("/ai/summary", async (req: Request, res: Response) => {
+router.post("/ai/summary", requireAuth as any, async (req: Request, res: Response) => {
   try {
     const { prompt } = req.body;
 
@@ -16,7 +17,7 @@ router.post("/ai/summary", async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await generateWithOllama(prompt);
+    const result = await aiService.chat(prompt);
 
     res.json({
       success: true,

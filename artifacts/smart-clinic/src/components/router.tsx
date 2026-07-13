@@ -24,6 +24,7 @@ import Pharmacy from "@/pages/pharmacy";
 import Lab from "@/pages/lab";
 import Billing from "@/pages/billing";
 import Inventory from "@/pages/inventory";
+import Referrals from "@/pages/referrals";
 import Suppliers from "@/pages/suppliers";
 import Staff from "@/pages/staff";
 import Settings from "@/pages/settings";
@@ -45,6 +46,7 @@ const routeRoles: Record<string, string[]> = {
   "/pharmacy": ["clinic_admin", "pharmacist", "nurse"],
   "/lab": ["clinic_admin", "lab_technician", "doctor"],
   "/billing": ["clinic_admin", "cashier", "receptionist"],
+  "/referrals": ["clinic_admin", "doctor", "nurse", "receptionist"],
   "/inventory": ["clinic_admin", "pharmacist"],
   "/suppliers": ["clinic_admin", "pharmacist"],
   "/staff-availability": ["clinic_admin", "doctor", "nurse", "receptionist"],
@@ -230,6 +232,9 @@ export function AppRouter() {
       </Route>
       <Route path="/billing">
         <ModuleRoute component={Billing} allowedRoles={routeRoles["/billing"]} moduleFlag="hasBilling" moduleName="Billing" />
+      </Route>
+      <Route path="/referrals">
+        <ProtectedPage component={Referrals} allowedRoles={routeRoles["/referrals"]} />
       </Route>
       <Route path="/inventory">
         <ModuleRoute component={Inventory} allowedRoles={routeRoles["/inventory"]} moduleFlag="hasInventory" moduleName="Inventory" />
