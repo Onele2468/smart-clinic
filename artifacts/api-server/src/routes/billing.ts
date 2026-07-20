@@ -7,6 +7,8 @@ import {
 import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole, requireClinicModule } from "../lib/auth";
 import { logActivity } from "../lib/activityLogger";
+import { WorkflowEvent } from "../constants/workflowEvents";
+import { processWorkflowEvent } from "../services/workflow/workflow-engine.service";
 import {
   countUnpaidInvoices,
   maybeLogUnpaidInvoicesAlert,
@@ -248,39 +250,20 @@ router.post("/clinics/:clinicId/invoices/:invoiceId/payments", requireAuth as an
   }
 
   const { amount, paymentMethod, reference } = parsed.data;
-  const currentPaid = parseFloat(String(invoice.paidAmount));
-  const total = parseFloat(String(invoice.totalAmount));
-  const newPaid = Math.min(currentPaid + amount, total);
-  const newBalance = total - newPaid;
-  const newStatus = newBalance <= 0 ? "paid" : newPaid > 0 ? "partial" : "unpaid";
-
-  const [payment] = await db.insert(paymentsTable).values({
-    invoiceId,
+  const result = await processWorkflowEvent(WorkflowEvent.PAYMENT_COMPLETED, {
     clinicId,
-    receivedById: user.userId,
-    amount: String(amount),
+    invoiceId,
+    patientId: invoice.patientId,
+    amount,
     paymentMethod,
     reference: reference ?? null,
-    paidAt: new Date(),
-  }).returning();
-
-  const [updatedInvoice] = await db.update(invoicesTable)
-    .set({ paidAmount: String(newPaid), balance: String(newBalance), status: newStatus })
-    .where(eq(invoicesTable.id, invoiceId))
-    .returning();
-
-  logActivity({
-    clinicId,
-    userId: user.userId,
+    receivedById: user.userId,
     userRole: user.role,
-    module: "billing",
-    actionType: "payment_recorded",
-    type: "payment_recorded",
-    message: `Payment of ${amount} recorded for invoice ${invoice.invoiceCode} via ${paymentMethod}`,
-    entityId: invoiceId,
-  });
+    source: "manual",
+    paidAt: new Date(),
+  }) as any;
 
-  res.status(201).json({ payment, invoice: updatedInvoice });
+  res.status(201).json({ payment: result.payment, invoice: result.invoice, receipt: result.receipt, visitSummary: result.visitSummary });
 });
 
 // Billing stats for clinic
@@ -333,6 +316,15 @@ router.get("/clinics/:clinicId/billing/stats", requireAuth as any, requireClinic
     bankAccountNumber: clinic.bankAccountNumber ?? null,
     bankBranchCode: clinic.bankBranchCode ?? null,
     paymentReferenceInstructions: clinic.paymentReferenceInstructions ?? null,
+    onlinePaymentsEnabled: clinic.onlinePaymentsEnabled ?? false,
+    paymentProvider: clinic.paymentProvider ?? "yoco",
+    paymentProviderMode: clinic.paymentProviderMode ?? "test",
+    paymentCurrency: clinic.paymentCurrency ?? "ZAR",
+    paymentProviderConnectionStatus: clinic.paymentProviderConnectionStatus ?? "not_configured",
+    paymentProviderWebhookStatus: clinic.paymentProviderWebhookStatus ?? "not_configured",
+    paymentProviderPublicKeyConfigured: !!((clinic.paymentProviderCredentials as any)?.publicKey),
+    paymentProviderConfigured: !!((clinic.paymentProviderCredentials as any)?.secretKey),
+    paymentProviderWebhookConfigured: !!((clinic.paymentProviderCredentials as any)?.webhookSecret),
   });
 });
 
@@ -350,6 +342,13 @@ router.patch("/clinics/:clinicId/billing/settings", requireAuth as any, requireC
     bankAccountNumber: z.string().optional().nullable(),
     bankBranchCode: z.string().optional().nullable(),
     paymentReferenceInstructions: z.string().optional().nullable(),
+    onlinePaymentsEnabled: z.boolean().optional(),
+    paymentProvider: z.enum(["yoco"]).optional(),
+    paymentProviderMode: z.enum(["test", "live"]).optional(),
+    paymentCurrency: z.literal("ZAR").optional(),
+    paymentProviderPublicKey: z.string().optional().nullable(),
+    paymentProviderSecretKey: z.string().optional().nullable(),
+    paymentProviderWebhookSecret: z.string().optional().nullable(),
   });
 
   const parsed = UpdateBillingSettings.safeParse(req.body);
@@ -358,9 +357,30 @@ router.patch("/clinics/:clinicId/billing/settings", requireAuth as any, requireC
     return;
   }
 
+  const update: any = { ...parsed.data };
+  const credentialsPatch: Record<string, string> = {};
+  if ("paymentProviderPublicKey" in update) {
+    if (update.paymentProviderPublicKey) credentialsPatch.publicKey = update.paymentProviderPublicKey;
+    delete update.paymentProviderPublicKey;
+  }
+  if ("paymentProviderSecretKey" in update) {
+    if (update.paymentProviderSecretKey) credentialsPatch.secretKey = update.paymentProviderSecretKey;
+    delete update.paymentProviderSecretKey;
+  }
+  if ("paymentProviderWebhookSecret" in update) {
+    if (update.paymentProviderWebhookSecret) credentialsPatch.webhookSecret = update.paymentProviderWebhookSecret;
+    delete update.paymentProviderWebhookSecret;
+  }
+  if (Object.keys(credentialsPatch).length > 0) {
+    const [current] = await db.select({ paymentProviderCredentials: clinicsTable.paymentProviderCredentials }).from(clinicsTable).where(eq(clinicsTable.id, clinicId));
+    update.paymentProviderCredentials = { ...((current?.paymentProviderCredentials as Record<string, unknown>) ?? {}), ...credentialsPatch };
+    if (credentialsPatch.secretKey || credentialsPatch.publicKey) update.paymentProviderConnectionStatus = "configured";
+    if (credentialsPatch.webhookSecret) update.paymentProviderWebhookStatus = "configured";
+  }
+
   const [clinic] = await db
     .update(clinicsTable)
-    .set(stripWhatsappFieldsFromUpdate(parsed.data))
+    .set(stripWhatsappFieldsFromUpdate(update))
     .where(eq(clinicsTable.id, clinicId))
     .returning();
   res.json(toPublicClinic(clinic));

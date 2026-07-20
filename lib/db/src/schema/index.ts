@@ -29,3 +29,5 @@ export * from "./departments";
 export * from "./doctor_profiles";
 export * from "./doctor_availability";
 export * from "./referrals";
+export * from "./payment_provider_transactions";
+export * from "./patient_journey_timeline";

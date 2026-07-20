@@ -19,6 +19,7 @@ import whatsappRouter from "./whatsapp";
 import clinicSettingsRouter from "./clinic_settings";
 import aiRouter from "./ai";
 import referralsRouter from "./referrals";
+import paymentProvidersRouter from "./payment_providers";
 
 const router: IRouter = Router();
 
@@ -41,6 +42,7 @@ router.use("/suppliers", suppliersRoutes);
 router.use(whatsappRouter);
 router.use(clinicSettingsRouter);
 router.use(referralsRouter);
+router.use(paymentProvidersRouter);
 
 // ✅ AI Routes
 router.use(aiRouter);

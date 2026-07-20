@@ -623,7 +623,7 @@ export function dispatchWhatsAppNotification(payload: WhatsAppDispatchPayload): 
         return;
       }
 
-      const body = buildWhatsAppMessage(triggerAction, context);
+      const body = payload.message?.trim() || buildWhatsAppMessage(triggerAction, context);
       logger.info(
         {
           ...baseLog,

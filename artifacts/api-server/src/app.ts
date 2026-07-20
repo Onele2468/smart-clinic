@@ -6,6 +6,7 @@ import type { pinoHttp as pinoHttpFactory } from "pino-http";
 import type { rateLimit as rateLimitFactory } from "express-rate-limit";
 import router from "./routes/index.js";
 import whatsappWebhookRouter from "./routes/whatsapp_webhook.js";
+import paymentProviderWebhooksRouter from "./routes/payment_provider_webhooks.js";
 import { logger } from "./lib/logger.js";
 
 const nodeRequire = createRequire(import.meta.url);
@@ -42,6 +43,11 @@ app.use(
   "/api/webhooks/whatsapp",
   express.raw({ type: "application/json" }),
   whatsappWebhookRouter,
+);
+app.use(
+  "/api/webhooks/payment-providers",
+  express.raw({ type: "application/json" }),
+  paymentProviderWebhooksRouter,
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

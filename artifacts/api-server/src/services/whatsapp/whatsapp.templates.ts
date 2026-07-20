@@ -11,7 +11,8 @@ const PATIENT_DEFAULTS: Record<WhatsAppTriggerAction, string> = {
   prescription_created: "Your prescription has been issued.",
   dispense: "Your medication is ready for collection.",
   invoice_created: "An invoice of {amount} has been generated.",
-  payment_recorded: "Payment received. Thank you.",
+  payment_recorded:
+    "Hello {patientName}.\n\nYour payment has been received successfully.\n\nAmount Paid\n{amount}\n\nYour visit has now been completed.\n\nYour receipt is now available.\n\nIf you need help with your medication, laboratory results, doctor instructions, or follow-up appointment, simply send us a message at any time.\n\nThank you for choosing Health Nexus.\n\nWe wish you a speedy recovery.\n\nHealth Nexus",
   patient_added: "Welcome to Smart Clinic.",
   nurse_assessment_completed:
     "Hello {patientName}. Your nurse triage assessment at the clinic is complete. Please proceed as directed by staff.",

@@ -26,6 +26,13 @@ export const clinicsTable = pgTable("clinics", {
   bankAccountNumber: text("bank_account_number"),
   bankBranchCode: text("bank_branch_code"),
   paymentReferenceInstructions: text("payment_reference_instructions"),
+  onlinePaymentsEnabled: boolean("online_payments_enabled").notNull().default(false),
+  paymentProvider: text("payment_provider").notNull().default("yoco"),
+  paymentProviderMode: text("payment_provider_mode").notNull().default("test"),
+  paymentCurrency: text("payment_currency").notNull().default("ZAR"),
+  paymentProviderConnectionStatus: text("payment_provider_connection_status").notNull().default("not_configured"),
+  paymentProviderWebhookStatus: text("payment_provider_webhook_status").notNull().default("not_configured"),
+  paymentProviderCredentials: jsonb("payment_provider_credentials").notNull().default({}),
   // WhatsApp automation (per-clinic credentials)
   whatsappEnabled: boolean("whatsapp_enabled").notNull().default(false),
   whatsappProvider: text("whatsapp_provider").notNull().default("meta"), // meta | twilio | 360dialog

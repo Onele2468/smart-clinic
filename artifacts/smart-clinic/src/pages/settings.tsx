@@ -81,9 +81,40 @@ export default function Settings() {
 
   const billingMutation = useMutation({
     mutationFn: (data: any) => apiFetch(`/clinics/${clinic?.id}/billing/settings`, { method: "PATCH", body: JSON.stringify(data) }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetMyClinicQueryKey() }); toast({ title: "Billing settings updated" }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getGetMyClinicQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["billing-stats", clinic?.id] });
+      toast({ title: "Billing settings updated" });
+    },
     onError: (e: any) => toast({ variant: "destructive", title: "Update failed", description: e.message }),
   });
+
+  const { data: billingStats } = useQuery({
+    queryKey: ["billing-stats", clinic?.id],
+    queryFn: () => apiFetch(`/clinics/${clinic!.id}/billing/stats`),
+    enabled: !!clinic?.id && isAdmin,
+  });
+
+  const [paymentForm, setPaymentForm] = React.useState({
+    onlinePaymentsEnabled: false,
+    paymentProvider: "yoco",
+    paymentProviderMode: "test",
+    paymentProviderPublicKey: "",
+    paymentProviderSecretKey: "",
+    paymentProviderWebhookSecret: "",
+  });
+  const paymentFormInitialized = useRef(false);
+
+  React.useEffect(() => {
+    if (!billingStats || paymentFormInitialized.current) return;
+    setPaymentForm((current) => ({
+      ...current,
+      onlinePaymentsEnabled: !!billingStats.onlinePaymentsEnabled,
+      paymentProvider: billingStats.paymentProvider ?? "yoco",
+      paymentProviderMode: billingStats.paymentProviderMode ?? "test",
+    }));
+    paymentFormInitialized.current = true;
+  }, [billingStats]);
 
   const [whatsappForm, setWhatsappForm] = React.useState({
     whatsappEnabled: false,
@@ -719,6 +750,93 @@ export default function Settings() {
                 />
               </div>
             ))}
+            <div className="pt-4 space-y-4">
+              <div className="flex items-center justify-between py-2 border-b">
+                <div>
+                  <p className="text-sm font-medium">Online Payments</p>
+                  <p className="text-xs text-muted-foreground">Allow patients to pay invoices through the configured payment gateway.</p>
+                </div>
+                <Switch
+                  checked={paymentForm.onlinePaymentsEnabled}
+                  onCheckedChange={(checked) => {
+                    setPaymentForm((form) => ({ ...form, onlinePaymentsEnabled: checked }));
+                    billingMutation.mutate({ onlinePaymentsEnabled: checked });
+                  }}
+                  disabled={billingMutation.isPending}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Provider</p>
+                  <Select
+                    value={paymentForm.paymentProvider}
+                    onValueChange={(value) => setPaymentForm((form) => ({ ...form, paymentProvider: value }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yoco">Yoco</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Mode</p>
+                  <Select
+                    value={paymentForm.paymentProviderMode}
+                    onValueChange={(value) => setPaymentForm((form) => ({ ...form, paymentProviderMode: value }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="test">Test</SelectItem>
+                      <SelectItem value="live">Live</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Currency</p>
+                  <Input value="ZAR" disabled />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Input
+                  placeholder={billingStats?.paymentProviderPublicKeyConfigured ? "Public key configured" : "Yoco public key"}
+                  value={paymentForm.paymentProviderPublicKey}
+                  onChange={(event) => setPaymentForm((form) => ({ ...form, paymentProviderPublicKey: event.target.value }))}
+                />
+                <Input
+                  type="password"
+                  placeholder={billingStats?.paymentProviderConfigured ? "Secret key configured" : "Yoco secret key"}
+                  value={paymentForm.paymentProviderSecretKey}
+                  onChange={(event) => setPaymentForm((form) => ({ ...form, paymentProviderSecretKey: event.target.value }))}
+                />
+                <Input
+                  type="password"
+                  placeholder={billingStats?.paymentProviderWebhookConfigured ? "Webhook secret configured" : "Yoco webhook secret"}
+                  value={paymentForm.paymentProviderWebhookSecret}
+                  onChange={(event) => setPaymentForm((form) => ({ ...form, paymentProviderWebhookSecret: event.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex gap-2">
+                  <Badge variant="outline">Connection: {billingStats?.paymentProviderConnectionStatus ?? "not_configured"}</Badge>
+                  <Badge variant="outline">Webhook: {billingStats?.paymentProviderWebhookStatus ?? "not_configured"}</Badge>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => billingMutation.mutate({
+                    onlinePaymentsEnabled: paymentForm.onlinePaymentsEnabled,
+                    paymentProvider: paymentForm.paymentProvider,
+                    paymentProviderMode: paymentForm.paymentProviderMode,
+                    paymentCurrency: "ZAR",
+                    paymentProviderPublicKey: paymentForm.paymentProviderPublicKey || undefined,
+                    paymentProviderSecretKey: paymentForm.paymentProviderSecretKey || undefined,
+                    paymentProviderWebhookSecret: paymentForm.paymentProviderWebhookSecret || undefined,
+                  })}
+                  disabled={billingMutation.isPending}
+                >
+                  {billingMutation.isPending ? "Saving..." : "Save Payment Gateway"}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
