@@ -76,7 +76,7 @@ This approach reduces maintenance costs, simplifies upgrades and ensures consist
 
 ---
 
-## PART 13 — Billing & Yoco
+## PART 13 — Billing, Financial Responsibility & Payment Integration
 
 ---
 
@@ -88,31 +88,31 @@ This approach reduces maintenance costs, simplifies upgrades and ensures consist
 
 ---
 
-## PART 16 — Database Architecture
+## PART 16 — Existing System Integration
 
 ---
 
-## PART 17 — Supabase Architecture
+## PART 17 — Database & Supabase Architecture
 
 ---
 
-## PART 18 — Ollama Architecture
+## PART 18 — Ollama AI Architecture
 
 ---
 
-## PART 19 — Security
+## PART 19 — Security & Compliance
 
 ---
 
-## PART 20 — API Standards
+## PART 20 — API & Integration Standards
 
 ---
 
-## PART 21 — Coding Standards
+## PART 21 — Development & Testing Standards
 
 ---
 
-## PART 22 — Codex Implementation Prompts
+## PART 22 — Codex Implementation Guide
 
 
 
@@ -187,7 +187,7 @@ These principles apply to every feature within Health Nexus.
 
 3. Reuse before creating.
 
-4. One patient record.
+4. One Global Person Identity with separate clinic-owned medical records.
 
 5. One appointment engine.
 
@@ -610,7 +610,7 @@ Each module communicates with the others through shared services and APIs.
 
 Health Nexus follows these principles:
 
-- One patient record.
+- One Global Person Identity with clinic-owned medical records.
 - One appointment engine.
 - One queue engine.
 - One notification system.
@@ -1003,27 +1003,29 @@ Artificial Intelligence enhances this workflow.
 
 Every staff member continues performing their professional responsibilities while AI assists them throughout the patient's journey.
 
-The patient workflow must remain consistent across:
+The Workflow Engine remains consistent across:
 
 - Private Clinics
 - Government Clinics
 - NGO Clinics
+- Other supported organisation types
 
-The patient workflow remains identical for every clinic.
+The actual patient journey may vary according to:
 
-Clinic Settings determine how the workflow behaves.
+- Clinic Configuration
+- Clinic Capabilities
+- Available Departments
+- Service Availability
+- Appointment Policies
+- Queue Policies
+- Financial Configuration
+- Clinical Decisions
+- Referral Requirements
+- Organisation Policies
 
-Examples include:
+The Workflow Engine remains the central controller and uses configuration and capability information to determine the patient's valid next step.
 
-- Billing enabled or disabled
-- Payment provider
-- Queue policies
-- Appointment policies
-- Reporting requirements
-
-The Workflow Engine itself does not change.
-
-Different organisation types may configure features differently, but the workflow itself remains the same.
+Different clinics may therefore provide different patient journeys while using the same Workflow Engine and underlying platform architecture.
 
 ---
 
@@ -1139,21 +1141,36 @@ Medication Dispensed
 
 ────────────────────────────────
 
-Generate Invoice
+Financial Assessment
+↓
+
+Determine Financial Responsibility
+↓
+
+┌──────────────────────────────┐
+│ Patient Payment              │
+│ Medical Aid / Insurance      │
+│ Patient Co-payment           │
+│ Government Funding           │
+│ NGO / Donor / Sponsor        │
+│ Clinic-funded                │
+│ Payment Arrangement          │
+│ No Charge                    │
+└──────────────────────────────┘
 
 ↓
 
-Yoco Payment
-or
-Manual Payment
+Financial Processing
+↓
+
+Financial Requirement Resolved
+↓
+
+Workflow Engine
 
 ↓
 
-Payment Confirmed
-
-↓
-
-Consultation Completed
+Next Workflow Stage
 
 ↓
 
@@ -1161,7 +1178,7 @@ Follow-up AI
 
 ↓
 
-Patient Journey Ends
+Patient Journey Complete
 ```
 
 ---
@@ -1902,7 +1919,7 @@ The AI Reception Assistant must never:
 The AI Reception Assistant must integrate with:
 
 - WhatsApp Cloud API
-- Existing Conversation Engine
+- ConversationAI
 - Existing Notification Service
 - Existing Appointment Service
 - Existing Authentication
@@ -6842,7 +6859,7 @@ The Pharmacy Workflow & Pharmacy AI is complete when:
 
 ---
 
-# PART 13 — BILLING & YOCO PAYMENT INTEGRATION
+# PART 13 — BILLING, FINANCIAL RESPONSIBILITY & PAYMENT INTEGRATION
 
 ## Workflow Engine Rule
 
@@ -6927,74 +6944,107 @@ The AI never processes payments independently.
 
 # Payments & Billing Workflow
 
-Doctor Consultation Complete
+The Workflow Engine controls when billing and financial processing occur during the patient journey.
 
+Payment timing is determined by clinic configuration and financial policy.
+
+A clinic may require payment:
+
+- Before a service.
+- During a workflow stage.
+- After a service.
+- At the end of a visit.
+- Through a medical aid or insurance process.
+- Through a sponsored or donor-funded arrangement.
+- Through an approved payment arrangement.
+
+The Workflow Engine must never assume that every patient must make a direct payment.
+
+The financial workflow is:
+
+Patient
 ↓
-
+Appointment / Consultation / Service
+↓
+Patient Checked In
+↓
+Service Determined
+↓
+Financial Assessment
+↓
+Invoice / Charge Generated (if applicable)
+↓
+Determine Financial Responsibility
+↓
+Financial Processing
+↓
+Financial Requirement Resolved
+↓
 Workflow Engine
-
 ↓
+Next Patient Workflow Stage
 
-Billing
+## Financial Responsibility
 
-↓
+Health Nexus must determine who is financially responsible for each service.
 
-Invoice Generated
+Possible financial responsibility types include:
 
-↓
+- Patient
+- Medical Aid / Insurance
+- Patient + Medical Aid / Insurance
+- Government / Public Funding
+- NGO / Donor / Sponsor
+- Clinic-funded Service
+- Other configured funding source
 
-Payment Required?
+Financial responsibility must be determined from:
 
-↓
+- Clinic configuration
+- Service configuration
+- Patient information
+- Medical Aid information
+- Applicable funding rules
+- Authorised billing rules
 
-YES
+The Billing AI Assistant may assist staff by organising and presenting this information, but it must never independently determine or change financial policy.
 
-↓
-
-Yoco Payment
-
-↓
-
-Receipt Generated
-
-↓
-
-Workflow Engine
-
-↓
-
-Visit Complete
-
-↓
-
-Follow-up AI
-
----
 
 # Billing Configuration
 
-Billing behaviour depends on the organisation configuration.
+Billing behaviour is determined by clinic configuration.
 
-Private Clinic
+Organisation type must never be used as a hard-coded assumption about whether a patient must pay.
 
-- Consultation fees apply.
-- Medication charges apply.
-- Laboratory charges apply.
-- Yoco payment supported.
+For example:
 
-Government Clinic
+- A private clinic may require payment.
+- A government clinic may provide some services free of charge and charge for other services according to applicable rules.
+- An NGO clinic may provide sponsored services while charging for other services.
+- A clinic may accept Medical Aid for some services but not others.
+- A clinic may have different financial rules for different patient categories.
 
-- Services may be free.
-- Subsidised services supported.
-- Payment rules determined by clinic configuration.
+The Workflow Engine must use the configured financial rules for the specific clinic, service and patient.
 
-NGO Clinic
+Clinic configuration may include:
 
-- Services may be donor funded.
-- Sponsored consultations supported.
-- Billing determined by clinic configuration.
-
-The Workflow Engine should automatically apply the correct billing rules based on the patient's clinic.
+- Billing enabled
+- Accepted payment methods
+- Accepted Medical Aid providers
+- Medical Aid processing enabled
+- Patient co-payment rules
+- Sponsored services
+- Donor-funded services
+- Government-funded services
+- Payment arrangement support
+- Payment timing
+- Service pricing
+- Discounts
+- Tax configuration where applicable
+- Yoco enabled
+- EFT enabled
+- Cash enabled
+- Card payment enabled
 
 ---
 
@@ -7015,57 +7065,171 @@ The Billing Officer should review the invoice before payment when required by cl
 
 Every invoice should receive a unique invoice number.
 
+An invoice may contain multiple financial responsibility components.
+
+For example:
+
+Service Total: R850
+
+Medical Aid Responsibility: R650
+
+Patient Responsibility: R200
+
+The invoice must clearly distinguish:
+
+- Total Service Amount
+- Amount Covered by Medical Aid / Insurance
+- Patient Responsibility
+- Sponsored / Funded Amount
+- Amount Paid
+- Outstanding Amount
 ---
 
-# Payment Requirement Decision
+# Financial Assessment Decision
 
-Before sending a patient to Billing, the Workflow Engine should determine whether payment is required.
+Before a patient proceeds through a financially controlled workflow stage, the Workflow Engine must determine the financial state of the relevant service.
 
-Payment behaviour is determined by the organisation's billing configuration.
+The decision must not be based only on organisation type.
 
-Examples
+The Workflow Engine should evaluate:
 
-Private Clinic
+1. Is billing enabled for this clinic?
+2. Is the service billable?
+3. What is the configured service price?
+4. Does the patient have Medical Aid / Insurance?
+5. Is the Medical Aid provider accepted by the clinic?
+6. Does the service qualify for Medical Aid / Insurance?
+7. Is authorisation required?
+8. Is there a patient co-payment?
+9. Is the service sponsored or donor-funded?
+10. Is the service government-funded?
+11. Is a payment arrangement permitted?
+12. Is direct patient payment required?
 
-Payment Required
+The result must produce a financial state.
 
-↓
+Possible states include:
 
-Continue to Billing
+- NO_CHARGE
+- PATIENT_PAYMENT_REQUIRED
+- MEDICAL_AID_PENDING
+- MEDICAL_AID_APPROVED
+- MEDICAL_AID_REJECTED
+- PATIENT_COPAYMENT_REQUIRED
+- SPONSORED
+- GOVERNMENT_FUNDED
+- PAYMENT_PENDING
+- PAYMENT_FAILED
+- PAYMENT_COMPLETED
+- PAYMENT_ARRANGEMENT_APPROVED
+- FINANCIAL_REQUIREMENT_RESOLVED
 
-↓
-
-Yoco or Manual Payment
-
-Government Clinic
-
-No Payment Required
-
-↓
-
-Skip Billing
-
-↓
-
-Visit Complete
-
-NGO Clinic
-
-Sponsored Service
-
-↓
-
-Skip Billing
-
-↓
-
-Visit Complete
-
-The Workflow Engine should automatically apply the correct workflow according to the organisation's configuration.
-
-No staff member should manually decide whether Billing is required.
+The Workflow Engine determines the next workflow step from the resulting financial state.
 
 ---
+
+# Medical Aid / Insurance Workflow
+
+Health Nexus must support patients whose services are partially or fully funded through Medical Aid / Insurance.
+
+The workflow is:
+
+Patient
+↓
+Medical Aid Information Identified
+↓
+Check Accepted Provider
+↓
+Verify Patient / Membership Information
+↓
+Determine Service Coverage
+↓
+Authorisation Required?
+↓
+Financial Responsibility Calculated
+↓
+Medical Aid Responsibility
++
+Patient Responsibility
+↓
+Medical Aid Processing / Claim
++
+Patient Co-payment (if applicable)
+↓
+Financial Requirement Resolved
+↓
+Workflow Engine
+↓
+Continue Patient Journey
+
+Medical Aid must never be treated as an automatic guarantee of payment.
+
+The system must distinguish between:
+
+- Medical Aid information captured
+- Medical Aid verified
+- Coverage confirmed
+- Authorisation pending
+- Authorisation approved
+- Authorisation rejected
+- Claim submitted
+- Claim paid
+- Patient co-payment required
+- Patient payment completed
+
+
+# Payment Timing
+
+Payment timing is configurable per clinic and may vary by service.
+
+Supported models include:
+
+### Payment Before Service
+
+Patient
+↓
+Financial Assessment
+↓
+Payment
+↓
+Service
+
+### Payment During Workflow
+
+Service
+↓
+Financial Assessment
+↓
+Payment
+↓
+Next Workflow Stage
+
+### Payment After Service
+
+Service
+↓
+Invoice
+↓
+Payment
+↓
+Next Workflow Stage
+
+### Final Visit Payment
+
+Multiple Services
+↓
+Final Invoice
+↓
+Financial Assessment
+↓
+Payment / Funding
+↓
+Visit Completion
+
+The Workflow Engine must use the clinic's configured payment timing rules.
+
+No single payment timing model should be hard-coded for every organisation.
+
 
 # Payment Methods
 
@@ -7078,6 +7242,15 @@ Supported payment methods include:
 - Yoco Terminal
 - Yoco Payment Link
 - EFT (where enabled)
+Additional financial processing methods may include:
+
+- Medical Aid / Insurance Claim
+- Patient Co-payment
+- Sponsored Payment
+- Donor Funding
+- Government Funding
+- Approved Payment Arrangement
+
 
 The Workflow Engine should automatically record:
 
@@ -7097,9 +7270,24 @@ When payment is completed successfully:
 
 ---
 
-# AI Payment Assistant
+# AI Payment & Financial Assistant
 
 The AI Billing Assistant may communicate with patients through WhatsApp after an invoice has been generated.
+
+The AI Payment & Financial Assistant must first determine the patient's financial state before presenting payment options.
+
+The AI may communicate:
+
+- Amount owed by the patient
+- Medical Aid status
+- Patient co-payment
+- Sponsored status
+- Payment options
+- Payment arrangement options
+- Payment confirmation
+- Receipt availability
+
+The AI must never claim that a Medical Aid claim has been approved or paid unless that status has been confirmed by the appropriate system or authorised billing workflow.
 
 Example
 
@@ -7286,33 +7474,6 @@ No clinical records should be affected by a failed payment.
 
 ---
 
-# Payment Failures
-
-Health Nexus should safely manage unsuccessful payments.
-
-Examples include:
-
-- Card Declined
-- Insufficient Funds
-- Network Timeout
-- Cancelled Payment
-- Payment Gateway Error
-
-If payment fails:
-
-The Workflow Engine should:
-
-- Keep the invoice unpaid.
-- Record the failure.
-- Notify the patient.
-- Notify Billing Staff (if applicable).
-- Allow another payment attempt.
-- Allow another payment method.
-
-No clinical records should be affected by a failed payment.
-
----
-
 # Refund Management
 
 Refunds should only be processed by authorised Billing Staff.
@@ -7455,7 +7616,7 @@ Before a visit may be closed, the Workflow Engine should verify:
 - Consultation Completed
 - Laboratory Workflow Completed (if applicable)
 - Pharmacy Workflow Completed (if applicable)
-- Payment Completed (if required)
+- Financial Requirement Resolved (if applicable)
 - Receipt Generated (if applicable)
 
 Once verified, the Workflow Engine should:
@@ -7794,24 +7955,47 @@ All Follow-up AI actions must respect:
 
 # Acceptance Criteria
 
-The Follow-up AI & Patient Care module is complete when:
+The Payments & Billing Workflow is complete when:
 
-✓ Visit Summaries are sent.
+✓ Billing configuration works.
 
-✓ Medication Reminders work.
+✓ Financial assessment works.
 
-✓ Appointment Reminders work.
+✓ Financial responsibility can be determined.
 
-✓ Patients can ask questions naturally.
+✓ Patient payment is supported.
 
-✓ Escalation to the clinic works.
+✓ Medical Aid / Insurance workflows are supported.
 
-✓ Follow-up workflows are completed correctly.
+✓ Patient co-payments are supported.
+
+✓ Sponsored and donor-funded services are supported.
+
+✓ Government-funded or subsidised services can be configured.
+
+✓ Payment timing can be configured.
+
+✓ Multiple payment methods are supported.
+
+✓ Yoco integration works.
+
+✓ Payment links work.
+
+✓ Payment confirmations are verified.
+
+✓ Automatic receipts are generated where applicable.
+
+✓ Payment failures are handled safely.
+
+✓ Medical Aid / Insurance status is tracked.
+
+✓ Refund management works.
+
+✓ Financial audit history is complete.
 
 ✓ Workflow Engine updates automatically.
 
-✓ Existing workflows continue operating without interruption.
-
+✓ Existing billing workflows continue operating without interruption.
 
 
 
@@ -11301,3 +11485,670 @@ AI should accelerate development while respecting the architecture defined in th
 The Engineering Handbook is the authoritative source of truth.
 
 If implementation conflicts with this handbook, the handbook takes precedence.
+
+
+# PAYMENT GATEWAY & YOCO TECHNICAL NOTES — TO BE CONSOLIDATED INTO PART 20
+
+> **Consolidation Note**
+>
+> This technical payment gateway material is retained temporarily and will be incorporated into Part 20 — API & Integration Standards.
+>
+> Part 13 remains the authoritative source for Billing, Financial Responsibility and Payment Workflow rules.
+
+## Purpose
+
+Health Nexus includes a centralized Payment Gateway responsible for managing all financial transactions across the platform.
+
+The payment system supports:
+
+- Consultation payments
+- Medication payments
+- Laboratory payments
+- Radiology payments
+- Procedure payments
+- Outstanding balances
+- Deposits
+- Refunds
+- Multiple payment providers
+
+The first supported payment provider is **Yoco**.
+
+The payment architecture is designed so additional providers (PayFast, Ozow, Peach Payments, EFT, Medical Aid gateways, etc.) can be integrated without modifying the Billing module or clinical workflows.
+
+---
+
+# Core Principle
+
+Health Nexus modules must **never communicate directly** with a payment provider.
+
+Every payment request passes through the centralized Payment Gateway.
+
+```
+Reception
+      │
+Doctor
+      │
+Laboratory
+      │
+Radiology
+      │
+Pharmacy
+      │
+Cashier
+      │
+AI Reception
+      │
+      ▼
+Health Nexus Payment Gateway
+      │
+      ▼
+Yoco API
+```
+
+This architecture centralizes payment logic, improves security, simplifies maintenance, and allows future payment providers to be added with minimal effort.
+
+---
+
+# Philosophy
+
+The Payment Gateway is responsible for:
+
+- Creating payment requests
+- Generating secure payment links
+- Receiving webhook notifications
+- Verifying completed payments
+- Updating invoice status
+- Recording financial transactions
+- Processing refunds
+- Recording audit logs
+- Notifying internal systems
+
+The Payment Gateway never performs clinical decisions.
+
+Clinical workflows remain under the Workflow Engine.
+
+---
+
+# Cashier Responsibilities
+
+The Cashier remains the financial authority within Health Nexus.
+
+Cashier responsibilities include:
+
+- Creating invoices
+- Managing invoices
+- Accepting walk-in payments
+- Recording cash payments
+- Recording EFT payments
+- Processing card payments
+- Printing receipts
+- Issuing refunds
+- Cancelling invoices
+- Daily reconciliation
+- Closing cashier shifts
+- Viewing payment history
+
+Yoco processes electronic payments only.
+
+The Cashier role is never replaced.
+
+---
+
+# AI Reception Responsibilities
+
+The AI Reception Assistant may:
+
+- Inform patients of consultation fees
+- Explain outstanding balances
+- Generate secure payment links
+- Confirm payment status
+- Answer payment-related questions
+- Remind patients of unpaid invoices
+- Notify patients after successful payment
+
+The AI Reception Assistant may never:
+
+- Issue refunds
+- Cancel invoices
+- Modify invoice amounts
+- Apply discounts
+- Override completed payments
+- Waive balances
+
+Financial authorization always belongs to authorized staff.
+
+---
+
+# Reception Staff Responsibilities
+
+Reception staff may:
+
+- Create invoices
+- Request payments
+- Send payment links
+- View payment status
+- Confirm payment completion
+
+Reception staff may not:
+
+- Issue refunds
+- Void payments
+- Modify paid invoices
+
+---
+
+# Doctor Responsibilities
+
+Doctors never process payments.
+
+Doctors complete clinical consultations.
+
+After completing a consultation they simply generate billable services.
+
+```
+Consultation Completed
+
+↓
+
+Generate Billing Items
+
+↓
+
+Cashier
+```
+
+---
+
+# Pharmacy Responsibilities
+
+Pharmacy receives:
+
+```
+Prescription
+
+↓
+
+Medication Dispensed
+
+↓
+
+Generate Pharmacy Charges
+
+↓
+
+Cashier
+```
+
+---
+
+# Laboratory Responsibilities
+
+Laboratory receives:
+
+```
+Lab Request
+
+↓
+
+Sample Collected
+
+↓
+
+Results Completed
+
+↓
+
+Generate Laboratory Charges
+
+↓
+
+Cashier
+```
+
+---
+
+# Radiology Responsibilities
+
+Radiology receives:
+
+```
+Imaging Request
+
+↓
+
+Imaging Completed
+
+↓
+
+Generate Imaging Charges
+
+↓
+
+Cashier
+```
+
+---
+
+# Invoice Lifecycle
+
+```
+Draft
+
+↓
+
+Pending Payment
+
+↓
+
+Payment Requested
+
+↓
+
+Payment Processing
+
+↓
+
+Paid
+
+↓
+
+Completed
+```
+
+Alternative outcomes:
+
+```
+Pending
+
+↓
+
+Failed
+
+↓
+
+Expired
+
+↓
+
+Cancelled
+
+↓
+
+Refunded
+
+↓
+
+Partially Refunded
+```
+
+Once an invoice is marked **Paid**, invoice totals become immutable.
+
+Adjustments require:
+
+- Credit Note
+- Refund
+- New Invoice
+
+---
+
+# Online Payment Workflow
+
+```
+Invoice Created
+
+↓
+
+Payment Gateway
+
+↓
+
+Yoco Checkout
+
+↓
+
+Customer Bank
+
+↓
+
+Payment Approved
+
+↓
+
+Yoco Webhook
+
+↓
+
+Health Nexus
+
+↓
+
+Invoice Paid
+```
+
+---
+
+# Walk-In Payment Workflow
+
+```
+Patient Arrives
+
+↓
+
+Cashier Opens Invoice
+
+↓
+
+Card Machine / EFT / Cash
+
+↓
+
+Payment Successful
+
+↓
+
+Invoice Paid
+
+↓
+
+Receipt Printed
+```
+
+---
+
+# WhatsApp Payment Workflow
+
+The AI Reception Assistant may send secure payment links.
+
+Example:
+
+```
+Hello Onele.
+
+Your consultation invoice is ready.
+
+Amount:
+R350.00
+
+Click below to complete your payment securely.
+
+https://payments.yoco.com/...
+
+Thank you.
+```
+
+After payment:
+
+```
+Payment Completed
+
+↓
+
+Webhook Received
+
+↓
+
+Invoice Updated
+
+↓
+
+Workflow Continues
+
+↓
+
+Patient Notified
+```
+
+AI Response:
+
+```
+Your payment has been received successfully.
+
+Thank you.
+
+Your appointment has now been confirmed.
+```
+
+---
+
+# Payment Statuses
+
+Supported payment states include:
+
+- Draft
+- Pending
+- Requested
+- Processing
+- Paid
+- Failed
+- Cancelled
+- Expired
+- Refunded
+- Partially Refunded
+
+---
+
+# Webhook Processing
+
+Health Nexus listens for payment events from Yoco.
+
+Supported events include:
+
+```
+payment.completed
+
+payment.failed
+
+refund.completed
+
+refund.failed
+```
+
+Every webhook must verify:
+
+- Signature
+- Event authenticity
+- Invoice reference
+- Patient
+- Clinic
+- Amount
+- Currency
+
+Only verified webhook events may update invoices.
+
+---
+
+# Payment Verification
+
+Before marking an invoice as paid, Health Nexus verifies:
+
+- Invoice exists
+- Clinic exists
+- Patient exists
+- Amount matches
+- Currency matches
+- Invoice not already paid
+- Transaction not previously processed
+
+Duplicate webhook events must be ignored through idempotency protection.
+
+---
+
+# Audit Logging
+
+Every payment action creates an immutable audit record.
+
+Examples:
+
+```
+Invoice Created
+
+Payment Requested
+
+Payment Link Generated
+
+Payment Link Sent
+
+Payment Completed
+
+Webhook Received
+
+Invoice Updated
+
+Receipt Generated
+
+Refund Issued
+
+Refund Completed
+```
+
+Audit records can never be modified.
+
+---
+
+# Database Design
+
+New tables:
+
+```
+payments
+
+payment_methods
+
+payment_transactions
+
+payment_webhooks
+
+payment_refunds
+
+payment_audit_logs
+```
+
+Existing tables extended:
+
+```
+billing_invoices
+
+patients
+
+appointments
+
+notifications
+```
+
+---
+
+# Security
+
+Health Nexus follows strict payment security principles.
+
+- API keys are stored only on the backend.
+- Frontend applications never access Yoco credentials.
+- Payment amounts are calculated server-side.
+- Every webhook signature must be verified.
+- HTTPS is mandatory.
+- Sensitive information is never logged.
+
+---
+
+# Multi-Clinic Architecture
+
+Every financial record belongs to exactly one clinic.
+
+Required field:
+
+```
+clinic_id
+```
+
+Every payment query respects:
+
+- Row Level Security (RLS)
+- Tenant Isolation
+- Clinic Authorization
+
+No clinic may access another clinic's financial information.
+
+---
+
+# AI Payment Capabilities
+
+The AI Assistant has read-only financial access.
+
+Patients may ask:
+
+```
+How much do I owe?
+
+Have I paid?
+
+Can you send my payment link?
+
+Was my payment successful?
+
+What invoices are outstanding?
+```
+
+The AI Assistant may not:
+
+- Refund payments
+- Edit invoices
+- Void transactions
+- Change billing amounts
+- Override completed payments
+
+Financial authorization always belongs to authorized staff.
+
+---
+
+# Future Payment Providers
+
+The architecture is provider-independent.
+
+Supported future integrations include:
+
+- Yoco
+- PayFast
+- Ozow
+- Peach Payments
+- EFT
+- Medical Aid Gateways
+- Government Payment Platforms
+
+Adding a new provider requires implementing only a new Payment Adapter.
+
+Billing, Cashier, Reception, Pharmacy, Laboratory, AI Reception, and Workflow Engine remain unchanged.
+
+---
+
+# Engineering Rules
+
+1. UI components never communicate directly with payment providers.
+2. Every payment flows through the Payment Gateway.
+3. API keys remain server-side only.
+4. Every webhook must be validated.
+5. Idempotency prevents duplicate processing.
+6. Every payment action creates an audit record.
+7. All financial records include `clinic_id`.
+8. Billing remains the source of truth for invoices.
+9. Workflow Engine remains the source of truth for patient progression.
+10. AI may assist patients but never authorize financial changes.
+11. Payment providers must remain interchangeable without changing business logic.
+
+---
+
+# Expected Result
+
+After implementation:
+
+- Patients can securely pay online using Yoco.
+- Cashiers continue managing financial operations.
+- Reception staff can create invoices and monitor payments.
+- AI Reception can send payment links and confirm payment status.
+- Doctors never manage payments.
+- Pharmacy and Laboratory automatically generate billable services.
+- Yoco webhooks automatically update invoices after successful payment.
+- Patients receive immediate payment confirmations.
+- Workflow Engine automatically continues patient progression after verified payment.
+- Future payment providers can be integrated without modifying the rest of Health Nexus.
+
+This architecture establishes a secure, scalable, multi-tenant, and provider-independent payment system that aligns with the overall modular architecture of Health Nexus.
