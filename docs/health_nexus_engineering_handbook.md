@@ -12152,3 +12152,730 @@ After implementation:
 - Future payment providers can be integrated without modifying the rest of Health Nexus.
 
 This architecture establishes a secure, scalable, multi-tenant, and provider-independent payment system that aligns with the overall modular architecture of Health Nexus.
+
+
+
+PART 18 — OLLAMA AI ARCHITECTURE
+18.1 Purpose
+
+Ollama provides the local AI model runtime for Health Nexus.
+
+Ollama is responsible for generating AI responses and recommendations based on the context supplied by the Health Nexus AI Engine.
+
+Ollama does not replace:
+
+The Workflow Engine
+Supabase
+Existing Health Nexus services
+WhatsApp infrastructure
+Clinical staff
+Billing services
+Referral services
+Notification services
+
+The AI Engine remains responsible for preparing, controlling and validating AI requests before they reach Ollama.
+
+The AI Engine also remains responsible for processing the resulting AI response before it is returned to the patient or staff member.
+
+18.2 AI Architecture
+
+The Health Nexus AI architecture is:
+
+Patient / Staff
+      ↓
+Existing Health Nexus Interface
+      ↓
+WhatsApp / Web Application
+      ↓
+Existing Communication Service
+      ↓
+ConversationAI
+      ↓
+Context Engine
+      ↓
+Configuration Engine
+      ↓
+Capability Engine
+      ↓
+Prompt Engine
+      ↓
+Prompt Builder
+      ↓
+Ollama
+      ↓
+AI Response
+      ↓
+AI Safety / Validation
+      ↓
+Workflow Engine / Existing Service
+      ↓
+Notification Service
+      ↓
+Patient / Staff
+
+The AI must not communicate directly with WhatsApp.
+
+All communication continues through the existing Health Nexus communication and notification architecture.
+
+18.3 Ollama Responsibility
+
+Ollama is responsible for:
+
+Natural-language understanding
+Natural-language generation
+AI reasoning assistance
+Conversation responses
+Summarisation
+Structured recommendation generation
+Classification where configured
+AI-assisted workflow interpretation
+
+Ollama is not responsible for:
+
+Patient registration
+Authentication
+Authorisation
+RLS
+Workflow state changes
+Appointment creation without authorised service logic
+Payment confirmation
+Medical Aid approval
+Prescription creation
+Medication dispensing
+Laboratory result approval
+Referral approval
+Clinical decision-making
+
+These responsibilities remain within Health Nexus services and authorised human workflows.
+
+18.4 AI Engine as the Control Layer
+
+Ollama must never be treated as the Health Nexus AI architecture by itself.
+
+The architecture is:
+
+Health Nexus AI Engine
+        │
+        ├── Context Engine
+        ├── Configuration Engine
+        ├── Capability Engine
+        ├── Prompt Engine
+        ├── Prompt Builder
+        ├── Safety Controls
+        ├── AI Validation
+        └── Ollama Adapter
+                    │
+                    ▼
+                  Ollama
+
+This allows Health Nexus to change the AI model in the future without rewriting the rest of the platform.
+
+Ollama is therefore an AI model runtime, not the application's business-logic layer.
+
+18.5 Ollama Adapter
+
+Health Nexus should communicate with Ollama through an internal AI/Ollama adapter.
+
+The adapter should be responsible for:
+
+Model selection
+Request formatting
+Timeout handling
+Retry handling
+Response parsing
+Error handling
+Model availability checks
+Logging of AI execution metadata
+Returning structured AI results to the AI Engine
+
+The rest of Health Nexus must not depend directly on Ollama-specific implementation details.
+
+Conceptually:
+
+Health Nexus
+      ↓
+AI Engine
+      ↓
+Ollama Adapter
+      ↓
+Ollama
+
+This allows another AI provider or model runtime to be introduced later without changing the application architecture.
+
+18.6 Context Engine
+
+Before an AI request reaches Ollama, the Context Engine determines the operational context.
+
+The context may include:
+
+Organisation
+Clinic
+WhatsApp Number
+Department
+Patient
+Staff Member
+User Role
+Current Workflow
+Queue Status
+Clinic Capabilities
+Permissions
+Conversation History
+
+The AI must never receive unrestricted Health Nexus data.
+
+Only the minimum authorised context required for the current task should be supplied.
+
+This preserves the multi-clinic privacy architecture already defined in Health Nexus.
+
+18.7 Configuration Engine
+
+The Configuration Engine provides the operational configuration required by the AI.
+
+Examples include:
+
+Organisation type
+Clinic settings
+Appointment rules
+Queue rules
+Payment rules
+AI behaviour
+Languages
+Notification rules
+Operating hours
+
+The AI must not assume that every Health Nexus clinic operates in the same way.
+
+For example:
+
+Clinic A
+Billing = Enabled
+Yoco = Enabled
+Laboratory = Disabled
+Dental = Disabled
+
+while:
+
+Clinic B
+Billing = Enabled
+Yoco = Disabled
+Laboratory = Enabled
+Dental = Enabled
+
+The same AI Engine can serve both clinics because the configuration and capability context are different.
+
+18.8 Capability Engine
+
+Before AI recommends or initiates a workflow-related action, the Capability Engine must determine whether the current clinic supports the requested service.
+
+Example:
+
+Patient asks:
+"I need dental treatment."
+
+        ↓
+
+Capability Engine
+
+        ↓
+
+Dental available?
+
+If:
+
+YES
+
+the AI can guide the patient through the configured dental workflow.
+
+If:
+
+NO
+
+the AI must not pretend that the clinic provides dental services.
+
+The Referral Engine may instead be invoked through the authorised Health Nexus workflow.
+
+18.9 Prompt Engine
+
+The Prompt Engine manages the prompts used by Health Nexus AI modules.
+
+Prompts should not be scattered throughout application code.
+
+AI modules should retrieve their approved prompt configuration through the Prompt Engine.
+
+Examples include:
+
+Reception Prompt
+Appointment Prompt
+Queue Prompt
+Nurse Prompt
+Doctor Prompt
+Laboratory Prompt
+Pharmacy Prompt
+Billing Prompt
+Follow-up Prompt
+
+This allows AI behaviour to be improved without rewriting unrelated application logic.
+
+18.10 Prompt Builder
+
+Before sending a request to Ollama, the Prompt Builder assembles the final AI prompt.
+
+The Prompt Builder combines:
+
+Base Health Nexus Instructions
+        +
+AI Module Instructions
+        +
+Organisation Configuration
+        +
+Clinic Configuration
+        +
+Capability Profile
+        +
+User Role
+        +
+Current Workflow
+        +
+Authorised Patient Context
+        +
+Conversation History
+        +
+Safety Rules
+
+The completed prompt is then sent to Ollama through the Ollama Adapter.
+
+18.11 Prompt Versioning
+
+Every production prompt must be version controlled.
+
+A prompt should contain:
+
+Prompt Name
+Version
+Status
+Created By
+Created Date
+Last Updated
+Change History
+
+Example:
+
+Reception AI
+Version: 1.0
+Status: Active
+
+A later modification becomes:
+
+Reception AI
+Version: 1.1
+Status: Active
+
+Previous versions must remain available for auditing and rollback.
+
+18.12 AI Response Validation
+
+Ollama's response must never automatically become a Health Nexus action.
+
+The flow is:
+
+Ollama
+   ↓
+AI Response
+   ↓
+Validation
+   ↓
+Safety Checks
+   ↓
+Permission Checks
+   ↓
+Workflow / Service Validation
+   ↓
+Authorised Action
+
+For example, if the AI generates:
+
+Create appointment
+
+the AI does not directly insert an appointment into the database.
+
+Instead:
+
+AI
+ ↓
+Appointment Service
+ ↓
+Validate availability
+ ↓
+Validate patient
+ ↓
+Validate clinic
+ ↓
+Validate permissions
+ ↓
+Create appointment
+
+This keeps the existing Health Nexus services authoritative.
+
+18.13 Structured AI Responses
+
+Where AI needs to interact with Health Nexus services, responses should preferably use structured output rather than relying only on free-form text.
+
+Example:
+
+{
+  "intent": "appointment_request",
+  "confidence": 0.94,
+  "action": "create_appointment",
+  "requires_confirmation": true
+}
+
+The application then validates the structured result before invoking the appropriate service.
+
+The AI must not be trusted as the final authority merely because it produced valid-looking JSON.
+
+18.14 Confidence Levels
+
+AI interactions should support internal confidence levels.
+
+Example:
+
+HIGH
+MEDIUM
+LOW
+
+Low-confidence results should normally trigger:
+
+Clarification
+Human review
+Safe fallback
+Escalation
+
+The AI must never compensate for low confidence by inventing information.
+
+18.15 AI Safety
+
+Health Nexus AI must never:
+
+Diagnose independently
+Prescribe medication independently
+Dispense medication
+Approve laboratory results
+Override a clinician
+Ignore emergencies
+Expose patient information
+Bypass permissions
+Bypass RLS
+Modify clinical records without authorised workflows
+Claim that an action succeeded when it has not been confirmed
+
+The AI must escalate to an appropriate human or Health Nexus workflow whenever the request exceeds its authorised capabilities.
+
+These safety rules are already established in the handbook and remain mandatory.
+
+18.16 Multi-Clinic AI Isolation
+
+A single Ollama runtime may serve multiple organisations.
+
+However, the AI context must remain isolated.
+
+For example:
+
+Clinic A WhatsApp
+       ↓
+Clinic A Context
+       ↓
+AI Engine
+       ↓
+Ollama
+
+and:
+
+Clinic B WhatsApp
+       ↓
+Clinic B Context
+       ↓
+AI Engine
+       ↓
+Ollama
+
+The fact that the same model runtime processes both requests does not mean Clinic A and Clinic B share conversational or clinical context.
+
+The application layer must enforce tenant and clinic boundaries before information reaches the model.
+
+18.17 Conversation Memory
+
+Conversation history must be scoped to the appropriate:
+
+Organisation
+Clinic
+Patient
+Conversation
+Channel
+
+The AI must not automatically use another clinic's conversation history merely because the same patient is known globally.
+
+If information from another organisation is required, the authorised Referral Engine and consent mechanisms must be used.
+
+18.18 Patient Data Minimisation
+
+Only the information necessary for the current AI task should be included in the model context.
+
+For example, an appointment request may require:
+
+Patient identity
+Clinic
+Available services
+Appointment rules
+Existing appointment information
+
+It does not automatically require:
+
+Complete medical history
+Laboratory results
+Pharmacy history
+Billing history
+
+unless those records are genuinely required and authorised for the current task.
+
+18.19 AI and Clinical Workflow
+
+AI must follow the Patient Journey Workflow.
+
+Example:
+
+Doctor
+ ↓
+Requests Laboratory
+ ↓
+Workflow Engine
+ ↓
+Laboratory Queue
+ ↓
+Laboratory Staff
+ ↓
+Results
+ ↓
+Doctor Review
+
+AI may:
+
+Explain the workflow
+Assist staff
+Summarise information
+Notify users
+Prepare recommendations
+
+AI must not independently move the patient between workflow stages.
+
+The Workflow Engine remains authoritative.
+
+18.20 AI and Billing
+
+AI may assist with:
+
+Explaining invoices
+Explaining patient responsibility
+Explaining payment options
+Guiding patients through Yoco payment
+Communicating Medical Aid status
+Communicating co-payment information
+Sending receipts
+Escalating billing questions
+
+AI must not:
+
+Mark an invoice paid without confirmation
+Approve Medical Aid claims
+Change financial responsibility without authorised billing logic
+Invent payment confirmations
+Bypass the Payment Gateway
+Modify financial records directly
+18.21 AI and Referrals
+
+AI may identify that a patient may require a service that is unavailable at the current clinic.
+
+However:
+
+AI
+ ↓
+Referral Engine
+ ↓
+Capability / Destination Validation
+ ↓
+Consent
+ ↓
+Referral
+
+must remain the process.
+
+AI must not independently disclose another organisation's clinical information.
+
+18.22 AI and WhatsApp
+
+The existing WhatsApp infrastructure remains.
+
+The AI conversation layer is integrated into the existing communication architecture.
+
+Conceptually:
+
+WhatsApp Cloud API
+        ↓
+whatsapp.incoming.ts
+        ↓
+ConversationAI
+        ↓
+AI Engine
+        ↓
+Workflow / Existing Services
+        ↓
+Notification Service
+        ↓
+whatsapp.delivery.ts
+        ↓
+WhatsApp
+
+Existing WhatsApp services must be reused rather than replaced.
+
+The handbook already establishes that the AI must not communicate directly with WhatsApp.
+
+18.23 AI Logging and Audit
+
+AI interactions must be auditable.
+
+The system should be able to determine:
+
+Who / Which patient
+Which organisation
+Which clinic
+Which channel
+Which AI module
+Which prompt version
+Which model
+When
+What action was requested
+What action was actually performed
+Whether human review occurred
+
+Logs must not unnecessarily expose sensitive patient information.
+
+18.24 Ollama Failure Handling
+
+If Ollama is unavailable:
+
+Ollama unavailable
+       ↓
+AI request fails safely
+       ↓
+Existing Health Nexus workflow remains operational
+       ↓
+Fallback / Human Assistance
+
+An Ollama outage must never stop the core healthcare platform from operating.
+
+For example, if AI is unavailable, a receptionist must still be able to register a patient manually.
+
+A nurse must still be able to perform the nurse workflow.
+
+A doctor must still be able to consult the patient.
+
+The Workflow Engine must continue functioning.
+
+18.25 Model Replacement
+
+The application must not become permanently dependent on a specific Ollama model.
+
+Model configuration should be abstracted through the AI Engine.
+
+For example:
+
+AI Engine
+    ↓
+Ollama Adapter
+    ↓
+Configured Model
+
+Changing the model must not require rewriting:
+
+Reception
+Appointments
+Workflow
+Billing
+WhatsApp
+Referrals
+Clinical services
+18.26 AI Deployment Principle
+
+AI should be introduced incrementally.
+
+Recommended order:
+
+ConversationAI
+      ↓
+Reception AI
+      ↓
+Appointment AI
+      ↓
+Nurse AI
+      ↓
+Doctor AI
+      ↓
+Laboratory AI
+      ↓
+Pharmacy AI
+      ↓
+Billing AI
+      ↓
+Follow-up AI
+
+Each module must be tested against the existing workflow before the next module is enabled.
+
+18.27 Part 18 Acceptance Criteria
+
+Part 18 is complete when:
+
+✓ Ollama is integrated through an AI Engine.
+✓ Existing Health Nexus functionality remains authoritative.
+✓ AI does not directly control WhatsApp.
+✓ AI does not directly modify database business records.
+✓ Context isolation is enforced.
+✓ Clinic configuration is respected.
+✓ Clinic capabilities are respected.
+✓ Prompts are centrally managed.
+✓ Prompts are version controlled.
+✓ AI responses are validated.
+✓ Confidence levels are supported.
+✓ AI safety rules are enforced.
+✓ Clinical decisions remain human-controlled.
+✓ Workflow transitions remain controlled by the Workflow Engine.
+✓ Billing actions remain controlled by billing services.
+✓ Referral actions remain controlled by the Referral Engine.
+✓ RLS and RBAC remain enforced.
+✓ AI failures do not break the existing Health Nexus platform.
+✓ Ollama models can be changed without rewriting Health Nexus.
+✓ AI interactions are auditable.
+🔒 Part 18 decision
+
+This is the important conclusion:
+
+Ollama is an infrastructure component inside the AI layer, not the foundation of Health Nexus.
+
+Your existing Health Nexus remains the foundation.
+
+              EXISTING HEALTH NEXUS
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+       Workflow Engine      Existing Services
+             │                   │
+             └─────────┬─────────┘
+                       │
+                    AI Engine
+                       │
+             ┌─────────┼─────────┐
+             │         │         │
+          Context   Prompts   Safety
+             │         │         │
+             └─────────┼─────────┘
+                       │
+                    Ollama
+
