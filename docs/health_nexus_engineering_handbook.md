@@ -13722,3 +13722,861 @@ In other words:
           ▼            ▼            ▼
      Conversation    Payment        AI
          AI          Provider      Runtime
+
+
+
+
+PART 22 — CODEX IMPLEMENTATION GUIDE
+
+This is the final handbook part we need before creating CODEX_MASTER_PROMPT.md.
+
+The purpose of Part 22 is not to teach Codex how to build Health Nexus from scratch.
+
+It tells Codex how to safely upgrade the existing, working Health Nexus platform with the approved V1 features from this handbook.
+
+22.1 Purpose
+
+Codex must treat Health Nexus as an existing healthcare platform.
+
+The implementation objective is:
+
+Extend Health Nexus without breaking existing functionality.
+
+Codex must inspect the existing project before making changes.
+
+The existing architecture, services, database, Workflow Engine, WhatsApp infrastructure and working patient workflows are considered valuable existing assets.
+
+Codex must therefore prefer:
+
+Inspect
+   ↓
+Understand
+   ↓
+Reuse
+   ↓
+Extend
+   ↓
+Test
+
+over:
+
+Rewrite
+   ↓
+Replace
+   ↓
+Rebuild
+22.2 Primary Implementation Rule
+
+The most important instruction is:
+
+DO NOT REBUILD HEALTH NEXUS.
+
+Codex must not treat the project as a greenfield application.
+
+The existing system is the starting point.
+
+New functionality must be integrated into the existing architecture.
+
+22.3 Existing Functionality Must Be Preserved
+
+The following existing capabilities must be preserved unless an explicit implementation requirement requires a controlled extension:
+
+Authentication
+Patient Registration
+Reception
+Appointment Engine
+Queue Management
+Nurse Workflow
+Doctor Workflow
+Laboratory Workflow
+Pharmacy Workflow
+Billing
+Notifications
+WhatsApp infrastructure
+Workflow Engine
+Multi-clinic functionality
+Supabase
+Row Level Security
+Existing APIs
+Existing services
+
+Codex must not remove or replace these systems merely because a new implementation appears cleaner.
+
+22.4 Mandatory Inspection Before Coding
+
+Before modifying the project, Codex must inspect the actual repository.
+
+The inspection must include:
+
+Repository
+    ↓
+package.json
+    ↓
+Application structure
+    ↓
+React components
+    ↓
+TypeScript services
+    ↓
+Workflow Engine
+    ↓
+Existing APIs
+    ↓
+WhatsApp services
+    ↓
+Notification services
+    ↓
+Supabase configuration
+    ↓
+Database schema
+    ↓
+Migrations
+    ↓
+RLS policies
+    ↓
+Functions / triggers
+    ↓
+Tests
+
+Codex must not assume that the current implementation matches the handbook exactly.
+
+The actual codebase is the implementation source of truth.
+
+The handbook is the architectural and functional specification.
+
+22.5 Existing-System Audit
+
+Before implementation begins, Codex must create an understanding of the current system.
+
+The audit should identify:
+
+Existing modules
+Existing services
+Existing APIs
+Existing database tables
+Existing relationships
+Existing workflows
+Existing WhatsApp integration
+Existing billing implementation
+Existing notification system
+Existing RLS policies
+Existing tests
+Existing configuration
+Existing integrations
+
+The audit should identify which components are:
+
+WORKING
+NEEDS EXTENSION
+INCOMPLETE
+MISSING
+UNKNOWN
+
+Codex must not modify the system merely to complete the audit.
+
+22.6 Existing System Map
+
+Before implementation, Codex should produce an internal or documented map similar to:
+
+Health Nexus
+│
+├── Authentication
+├── Patient Registration
+├── Reception
+├── Appointment Engine
+├── Queue
+├── Nurse
+├── Doctor
+├── Laboratory
+├── Pharmacy
+├── Billing
+├── Notifications
+├── WhatsApp
+├── Workflow Engine
+└── Supabase
+
+New capabilities are then mapped onto the existing system:
+
+Existing Health Nexus
+        │
+        ├── ConversationAI
+        ├── AI Assistants
+        ├── Payment Integration
+        ├── Referral Engine
+        ├── Ollama
+        └── Analytics Extensions
+22.7 Reuse Before Creating
+
+Before creating a new:
+
+Service
+API
+Database table
+Function
+Component
+Hook
+Utility
+Workflow
+Notification mechanism
+
+Codex must search the existing project for equivalent functionality.
+
+The decision process is:
+
+Does it already exist?
+        │
+       YES
+        ↓
+Can it be reused?
+        │
+   ┌────┴────┐
+  YES       NO
+   ↓         ↓
+ REUSE     EXTEND
+              │
+              ↓
+        Is extension safe?
+              │
+             YES
+              ↓
+           EXTEND
+
+Only create a new implementation when the existing architecture genuinely cannot support the requirement.
+
+22.8 No Duplicate Systems
+
+Codex must not create parallel versions of existing systems.
+
+Examples:
+
+Do not create:
+Existing Workflow Engine
++
+New AI Workflow Engine
+
+Use:
+
+AI
+ ↓
+Existing Workflow Engine
+Do not create:
+Existing WhatsApp System
++
+New WhatsApp System
+
+Use:
+
+Existing WhatsApp Infrastructure
+        ↓
+ConversationAI
+Do not create:
+Existing Billing
++
+Independent AI Billing System
+
+Use:
+
+AI
+ ↓
+Existing Billing Services
+22.9 AI Implementation Rule
+
+AI is an assistance layer.
+
+AI must not become the authority over clinical or operational state.
+
+The architecture is:
+
+AI
+ ↓
+Interpret / Assist
+ ↓
+Existing Health Nexus Service
+ ↓
+Validation
+ ↓
+Workflow Engine
+
+The AI may recommend an action.
+
+The appropriate Health Nexus service decides whether that action is valid.
+
+22.10 Clinical Decision Rule
+
+Codex must never implement AI as an independent clinical decision-maker.
+
+AI must not independently:
+
+Diagnose
+Prescribe
+Dispense
+Approve laboratory results
+Override clinicians
+Determine emergency treatment
+Modify clinical records outside authorised workflows
+
+Where clinical judgement is required, the system must escalate to an authorised healthcare professional.
+
+22.11 Workflow Engine Protection
+
+The Workflow Engine remains authoritative.
+
+Codex must not allow:
+
+AI
+WhatsApp
+Doctor UI
+Nurse UI
+Laboratory UI
+Pharmacy UI
+Billing UI
+
+to independently bypass the Workflow Engine when changing patient workflow state.
+
+The correct pattern is:
+
+Module
+  ↓
+Workflow Service
+  ↓
+Workflow Engine
+  ↓
+Validated Transition
+22.12 WhatsApp Implementation
+
+The existing WhatsApp infrastructure must remain.
+
+Codex must inspect and reuse:
+
+whatsapp.incoming.ts
+whatsapp.delivery.ts
+whatsapp.service.ts
+whatsapp.conversation.ts
+whatsapp.templates.ts
+whatsapp.monitoring.ts
+
+The approved architecture is:
+
+WhatsApp Cloud API
+       ↓
+Existing Incoming Service
+       ↓
+ConversationAI
+       ↓
+AI Engine
+       ↓
+Existing Health Nexus Services
+       ↓
+Existing Notification / Delivery Services
+       ↓
+WhatsApp
+
+The conversation intelligence may be replaced or extended.
+
+The WhatsApp transport infrastructure must not be unnecessarily rewritten.
+
+22.13 Clinic WhatsApp Isolation
+
+Each configured WhatsApp number must resolve to the correct organisation and clinic context.
+
+Codex must verify:
+
+WhatsApp Number
+      ↓
+Organisation
+      ↓
+Clinic
+      ↓
+Configuration
+      ↓
+Capabilities
+      ↓
+Conversation Context
+
+AI must never accidentally use another clinic's context.
+
+22.14 Multi-Clinic Patient Rule
+
+A person may receive care at multiple clinics.
+
+Codex must preserve the distinction between:
+
+Global Person Identity
+
+and:
+
+Clinic-Owned Medical Record
+
+The same patient may therefore exist across multiple clinics without those clinics automatically gaining access to each other's medical records.
+
+Cross-clinic information sharing must follow the authorised referral and consent process.
+
+22.15 Payment Implementation
+
+Codex must implement payment functionality through the approved Health Nexus financial architecture.
+
+The general flow is:
+
+Service
+ ↓
+Financial Assessment
+ ↓
+Financial Responsibility
+ ↓
+Patient / Medical Aid / Sponsor / Government / Combination
+ ↓
+Payment / Claim / Arrangement
+ ↓
+Verification
+ ↓
+Financial Requirement Resolved
+ ↓
+Workflow Continues
+
+Yoco is a payment provider.
+
+It must not become the central source of truth for Health Nexus financial state.
+
+22.16 Yoco Protection
+
+Codex must not hard-code Yoco into every billing workflow.
+
+Use:
+
+Health Nexus Payment Gateway
+          ↓
+Provider Adapter
+          ↓
+Yoco
+
+This allows additional payment providers to be added later.
+
+Payment confirmation must be verified through the appropriate webhook and transaction validation process.
+
+22.17 Medical Aid
+
+Medical Aid must not be treated as simply another card payment.
+
+Codex must preserve the distinction between:
+
+Financial Responsibility
+
+and:
+
+Actual Payment
+
+A patient may have:
+
+Medical Aid responsibility
+Patient co-payment
+Government funding
+NGO/donor funding
+Clinic-funded service
+Payment arrangement
+No charge
+
+The actual implementation must follow the approved Part 13 financial architecture.
+
+22.18 Referral Implementation
+
+Codex must implement referrals through the Referral Engine.
+
+The general flow is:
+
+Current Clinic
+      ↓
+Capability Check
+      ↓
+Referral Required
+      ↓
+Patient Consent
+      ↓
+Referral Package
+      ↓
+Destination Clinic
+
+The destination clinic must not automatically receive unrestricted access to the patient's entire medical history.
+
+Only the authorised referral information should be shared.
+
+22.19 Ollama Implementation
+
+Ollama must be integrated through the AI Engine.
+
+Codex must not allow application modules to communicate directly with Ollama.
+
+Use:
+
+Application
+   ↓
+AI Engine
+   ↓
+Ollama Adapter
+   ↓
+Ollama
+
+Ollama must remain replaceable.
+
+Changing the AI model must not require rewriting Health Nexus.
+
+22.20 Supabase Rule
+
+Codex must treat the existing Supabase project as an existing production asset.
+
+Before changing the database, inspect:
+
+Tables
+Columns
+Relationships
+Constraints
+Indexes
+Migrations
+RLS
+Functions
+Triggers
+Storage
+Existing data dependencies
+
+Do not create replacement tables simply because the handbook describes an architectural concept.
+
+First determine whether the existing schema already supports the requirement.
+
+22.21 RLS Rule
+
+Codex must never bypass Row Level Security simply to make a feature easier to implement.
+
+Any database operation involving patient or organisation data must respect the existing security architecture.
+
+AI must not receive unrestricted database access.
+
+22.22 API Rule
+
+Codex must reuse existing APIs and services where possible.
+
+Before creating an endpoint:
+
+Search existing endpoints
+        ↓
+Search existing service
+        ↓
+Search existing workflow
+        ↓
+Search existing event
+        ↓
+Extend if appropriate
+        ↓
+Create only if necessary
+
+Every new API must have a clear ownership boundary.
+
+22.23 Testing Before Deployment
+
+Every implementation phase must include testing.
+
+At minimum:
+
+Unit Tests
+Integration Tests
+Workflow Tests
+API Tests
+AI Tests
+Security Tests
+Regression Tests
+
+The most important test is:
+
+Does the existing Health Nexus workflow still work?
+
+22.24 Regression Testing
+
+After every meaningful change, Codex must verify existing functionality.
+
+At minimum:
+
+Patient Registration
+        ↓
+Reception
+        ↓
+Appointment / Walk-in
+        ↓
+Queue
+        ↓
+Nurse
+        ↓
+Doctor
+        ↓
+Laboratory
+        ↓
+Pharmacy
+        ↓
+Billing
+        ↓
+Completion
+
+The exact existing workflow must be determined from the actual codebase during the audit.
+
+Codex must not assume that the diagram above perfectly represents the current implementation.
+
+22.25 Incremental Implementation
+
+Codex must implement features incrementally.
+
+Recommended order:
+
+PHASE 0
+Existing System Audit
+        ↓
+PHASE 1
+ConversationAI / WhatsApp
+        ↓
+PHASE 2
+AI Assistants
+        ↓
+PHASE 3
+Payments / Yoco
+        ↓
+PHASE 4
+Referral Engine
+        ↓
+PHASE 5
+Ollama Production Integration
+        ↓
+PHASE 6
+Analytics Extensions
+        ↓
+PHASE 7
+Security / Hardening / Regression
+
+The actual order may be adjusted if the existing codebase reveals a dependency that requires a different sequence.
+
+Any change to the implementation order must be documented.
+
+22.26 Implementation Gate
+
+Codex must not begin a new phase until the previous phase has passed its acceptance criteria.
+
+Implement
+   ↓
+Test
+   ↓
+Regression Test
+   ↓
+Acceptance Criteria
+   ↓
+PASS
+   ↓
+Next Phase
+
+If a phase fails:
+
+FAIL
+ ↓
+STOP
+ ↓
+Identify Cause
+ ↓
+Fix
+ ↓
+Retest
+22.27 When Codex Must STOP
+
+Codex must stop implementation and request clarification when:
+
+Existing functionality conflicts with the handbook.
+A change would require replacing a working core system.
+A database migration could cause data loss.
+Existing RLS would need to be bypassed.
+A clinical decision is ambiguous.
+Payment responsibility is ambiguous.
+A referral would expose unauthorised patient information.
+Existing APIs have undocumented dependencies.
+The required feature cannot be safely implemented without changing a protected component.
+The implementation would introduce a breaking change.
+A requirement is outside the approved V1 scope.
+
+Codex must not guess in these situations.
+
+22.28 V1 Scope Lock
+
+This is mandatory.
+
+During V1 implementation, Codex must implement only features approved in this handbook.
+
+If Codex discovers a potentially useful feature that is not required for V1:
+
+Do not implement it.
+        ↓
+Record it in:
+FUTURE_V2_IDEAS.md
+        ↓
+Continue V1 implementation.
+
+Examples of features that should not automatically enter V1:
+
+New departments
+New AI agents
+New hospital integrations
+New payment providers
+Smart Supply expansion
+Unapproved automation
+Experimental AI features
+
+This rule exists specifically to prevent continuous scope expansion from delaying completion of the project.
+
+22.29 Code Quality
+
+Codex must:
+
+Follow existing project conventions.
+Reuse existing utilities.
+Avoid unnecessary dependencies.
+Avoid duplicated logic.
+Use TypeScript types appropriately.
+Handle errors explicitly.
+Keep functions focused.
+Keep service boundaries clear.
+Add tests for new behaviour.
+Avoid unrelated refactoring.
+
+A cleaner rewrite is not automatically a better implementation if it creates unnecessary risk.
+
+22.30 Git Discipline
+
+Before significant changes:
+
+Check Git status
+        ↓
+Create appropriate branch
+        ↓
+Implement small change
+        ↓
+Test
+        ↓
+Commit
+
+Commits should describe the actual change.
+
+Avoid large commits that combine unrelated features.
+
+Examples:
+
+feat: add conversation AI service
+feat: integrate Yoco payment webhook
+feat: add referral consent validation
+fix: preserve clinic context in WhatsApp conversation
+test: add payment idempotency tests
+22.31 Documentation
+
+Every significant implementation must update appropriate documentation.
+
+Documentation should explain:
+
+What changed
+Why it changed
+Which existing component was extended
+Which APIs were affected
+Which database structures were changed
+Which tests were added
+Any migration requirements
+Any configuration requirements
+22.32 Definition of Done
+
+A feature is not considered complete simply because the code compiles.
+
+A feature is complete when:
+
+Code implemented
+      +
+Existing functionality preserved
+      +
+Tests passing
+      +
+Regression tests passing
+      +
+Security verified
+      +
+RLS verified
+      +
+Workflow verified
+      +
+Documentation updated
+      +
+No unnecessary duplicate system
+
+Only then may the phase be considered complete.
+
+22.33 Final Codex Implementation Principle
+
+Codex must always remember:
+
+Health Nexus already exists. The task is to extend it safely, not to prove that Codex can build another Health Nexus.
+
+The implementation priority is therefore:
+
+1. Preserve
+2. Inspect
+3. Reuse
+4. Extend
+5. Test
+6. Secure
+7. Document
+8. Lock
+
+Not:
+
+Rewrite
+Replace
+Rebuild
+Redesign
+22.34 Part 22 Acceptance Criteria
+
+Part 22 is complete when Codex has clear instructions for:
+
+✓ Inspecting the existing repository
+✓ Auditing the existing system
+✓ Preserving working functionality
+✓ Reusing existing services
+✓ Reusing existing database structures
+✓ Protecting the Workflow Engine
+✓ Protecting WhatsApp infrastructure
+✓ Implementing ConversationAI
+✓ Implementing AI assistants
+✓ Implementing payment integration
+✓ Supporting Medical Aid
+✓ Implementing referrals
+✓ Integrating Ollama
+✓ Respecting RLS/RBAC
+✓ Protecting multi-clinic isolation
+✓ Testing every change
+✓ Performing regression testing
+✓ Stopping when requirements are ambiguous
+✓ Preventing V1 scope expansion
+✓ Documenting changes
+✓ Maintaining Git discipline
+✓ Defining when a feature is truly complete
+🔒 HANDBOOK IMPLEMENTATION RULE
+
+Once Codex receives the completed CODEX_MASTER_PROMPT.md, it must not immediately start coding.
+
+The first response/action must be an existing-system audit.
+
+The first implementation deliverable should therefore be a report such as:
+
+HEALTH NEXUS EXISTING SYSTEM AUDIT
+
+1. Existing architecture
+2. Existing working workflows
+3. Existing services
+4. Existing WhatsApp implementation
+5. Existing billing/payment implementation
+6. Existing Supabase schema
+7. Existing RLS
+8. Existing integrations
+9. Existing tests
+10. Required V1 extensions
+11. Potential risks
+12. Proposed implementation order
+
+Only after that audit should implementation begin.
+
+That is the final protection against us accidentally rebuilding the system you already have.
