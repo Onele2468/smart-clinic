@@ -12879,3 +12879,846 @@ Your existing Health Nexus remains the foundation.
                        │
                     Ollama
 
+
+
+PART 20 — API & INTEGRATION STANDARDS
+20.1 Purpose
+
+Health Nexus uses APIs and service interfaces to connect existing platform modules, new AI capabilities and external providers.
+
+The purpose of this architecture is to allow Health Nexus to be extended without replacing working functionality.
+
+The API and integration architecture must:
+
+Reuse existing services.
+Preserve existing workflows.
+Maintain clear service boundaries.
+Prevent duplicated business logic.
+Protect patient information.
+Respect organisation and clinic isolation.
+Respect RBAC and RLS.
+Support reliable external integrations.
+Provide auditable communication between services.
+Allow future providers to be added without redesigning the platform.
+
+The API layer must extend the existing Health Nexus platform rather than create a parallel application.
+
+20.2 Existing System First
+
+Before creating a new API or integration, the implementation team must inspect the existing Health Nexus service architecture.
+
+The developer must determine:
+
+Whether the required service already exists.
+Whether an existing endpoint already performs the required operation.
+Whether an existing service can be extended.
+Whether an existing event can be reused.
+Whether an existing database operation already supports the requirement.
+
+A new API must not be created simply because a new feature is being introduced.
+
+The rule is:
+
+Existing Service
+      ↓
+Can it support the requirement?
+      ↓
+YES → Reuse / Extend
+      ↓
+NO
+      ↓
+Design new integration
+
+This follows the existing Health Nexus integration philosophy: inspect first, reuse existing functionality and avoid unnecessary replacement.
+
+20.3 Internal Service Architecture
+
+Health Nexus services communicate through defined service interfaces.
+
+The major service areas include:
+
+Authentication
+Patient
+Reception
+Appointment
+Queue
+Workflow
+Nurse
+Doctor
+Laboratory
+Pharmacy
+Billing
+Payment
+Notification
+WhatsApp
+AI
+Referral
+Analytics
+
+The Workflow Engine remains the central workflow controller.
+
+For example:
+
+Doctor Service
+      ↓
+Workflow Service
+      ↓
+Workflow Engine
+      ↓
+Laboratory Queue
+
+The Doctor module must not directly modify the Laboratory queue database.
+
+Likewise:
+
+AI
+ ↓
+Appointment Service
+ ↓
+Appointment Engine
+
+rather than:
+
+AI
+ ↓
+Direct database INSERT
+ ↓
+Appointments
+20.4 Service Ownership
+
+Each service remains responsible for its own business logic.
+
+Examples:
+
+Appointment Service
+
+Responsible for:
+
+Appointment creation
+Appointment validation
+Availability
+Rescheduling
+Cancellation
+Queue Service
+
+Responsible for:
+
+Queue entries
+Queue status
+Queue ordering
+Queue events
+Billing Service
+
+Responsible for:
+
+Invoices
+Financial responsibility
+Patient responsibility
+Billing status
+Payment Service
+
+Responsible for:
+
+Payment initiation
+Payment status
+Provider references
+Payment verification
+Refunds
+Referral Service
+
+Responsible for:
+
+Referral creation
+Referral status
+Consent
+Referral package
+Receiving organisation
+AI Service
+
+Responsible for:
+
+AI requests
+Context
+Prompt construction
+AI response processing
+AI safety validation
+
+AI must not take ownership of another service's business data.
+
+20.5 API Request Flow
+
+A typical internal request should follow:
+
+User / AI / Service
+        ↓
+API
+        ↓
+Authentication
+        ↓
+Authorisation
+        ↓
+Organisation Context
+        ↓
+Clinic Context
+        ↓
+Service Validation
+        ↓
+Business Logic
+        ↓
+Database
+        ↓
+Audit / Event
+        ↓
+Response
+
+Every request must be evaluated within the correct organisation and clinic context.
+
+20.6 Authentication
+
+API requests must be authenticated where authentication is required.
+
+Authentication determines:
+
+Who is making the request?
+
+Authentication does not by itself determine:
+
+What is that person allowed to do?
+
+That is handled by authorisation.
+
+20.7 Authorisation
+
+Authorisation must determine whether the authenticated user or service may perform the requested action.
+
+The system should evaluate:
+
+User
+ ↓
+Organisation Membership
+ ↓
+Clinic Membership
+ ↓
+Role
+ ↓
+Permissions
+ ↓
+Requested Action
+
+A valid login must never be treated as permission to access all Health Nexus data.
+
+20.8 Organisation and Clinic Context
+
+Requests must carry or derive the correct organisation and clinic context.
+
+For example:
+
+Organisation A
+    ↓
+Clinic A1
+    ↓
+Request
+
+must not accidentally execute against:
+
+Organisation B
+    ↓
+Clinic B1
+
+The API layer must work together with Supabase RLS and existing access-control mechanisms.
+
+20.9 AI API Architecture
+
+AI requests should pass through the Health Nexus AI Engine.
+
+The architecture is:
+
+Patient / Staff
+      ↓
+Existing Health Nexus Interface
+      ↓
+AI API
+      ↓
+AI Engine
+      ↓
+Context Engine
+      ↓
+Configuration Engine
+      ↓
+Capability Engine
+      ↓
+Prompt Engine
+      ↓
+Ollama Adapter
+      ↓
+Ollama
+      ↓
+AI Validation
+      ↓
+Existing Health Nexus Service
+
+AI must not directly call unrelated business services without going through the appropriate service interface.
+
+20.10 WhatsApp Integration
+
+The existing WhatsApp integration remains.
+
+The existing services include:
+
+whatsapp.incoming.ts
+whatsapp.delivery.ts
+whatsapp.service.ts
+whatsapp.conversation.ts
+whatsapp.templates.ts
+whatsapp.monitoring.ts
+
+These services must be inspected before any changes are made.
+
+The intended architecture is:
+
+WhatsApp Cloud API
+        ↓
+whatsapp.incoming.ts
+        ↓
+ConversationAI
+        ↓
+AI Engine
+        ↓
+Health Nexus Service
+        ↓
+Workflow / Notification
+        ↓
+whatsapp.delivery.ts
+        ↓
+WhatsApp
+
+The existing WhatsApp transport layer is therefore preserved.
+
+Only the conversation/intelligence layer is upgraded.
+
+20.11 WhatsApp Webhooks
+
+Incoming WhatsApp events must be processed through the existing webhook architecture.
+
+The system should:
+
+Receive the webhook.
+Verify the request.
+Identify the WhatsApp number.
+Determine the organisation.
+Determine the clinic.
+Identify the patient where possible.
+Load the conversation.
+Build the AI context.
+Process the AI request.
+Invoke an authorised Health Nexus service where necessary.
+Generate the response.
+Send through the existing delivery service.
+
+The AI must never bypass webhook validation.
+
+20.12 WhatsApp Number Isolation
+
+Each clinic or organisation may have its own WhatsApp number.
+
+The WhatsApp number must therefore be mapped to the correct operational context.
+
+Example:
+
+WhatsApp Number A
+       ↓
+Organisation A
+       ↓
+Clinic A
+       ↓
+Clinic A Configuration
+       ↓
+Clinic A AI Context
+
+and:
+
+WhatsApp Number B
+       ↓
+Organisation B
+       ↓
+Clinic B
+       ↓
+Clinic B Configuration
+       ↓
+Clinic B AI Context
+
+A WhatsApp conversation must never accidentally inherit another clinic's AI context.
+
+20.13 Payment Integration
+
+Payment integrations must use the Health Nexus Payment Gateway abstraction.
+
+The Workflow Engine and Billing Service must not become tightly coupled to a specific payment provider.
+
+The architecture is:
+
+Health Nexus
+      ↓
+Payment Gateway
+      ↓
+Provider Adapter
+      ↓
+Yoco
+
+Yoco is one provider.
+
+Future providers may be added through additional adapters without rewriting billing workflows.
+
+20.14 Payment Initiation
+
+A payment request should contain sufficient information to identify:
+
+Patient
+Organisation
+Clinic
+Visit
+Invoice
+Service
+Amount
+Currency
+Payment reference
+
+The Payment Gateway should return a provider reference and payment status.
+
+Health Nexus must maintain its own financial state.
+
+20.15 Payment Confirmation
+
+A payment provider confirmation must never be accepted blindly.
+
+The flow is:
+
+Payment Provider
+      ↓
+Webhook
+      ↓
+Webhook Verification
+      ↓
+Payment Gateway
+      ↓
+Transaction Validation
+      ↓
+Invoice Validation
+      ↓
+Amount Validation
+      ↓
+Duplicate Check
+      ↓
+Payment Status Update
+      ↓
+Billing Service
+      ↓
+Financial Requirement Resolved
+      ↓
+Workflow Engine
+
+The same transaction must not be recorded twice.
+
+Payment processing must therefore support idempotency.
+
+20.16 Payment Webhooks
+
+Payment webhooks must be:
+
+Authenticated
+Validated
+Logged
+Idempotent
+Associated with the correct clinic
+Associated with the correct invoice
+Associated with the correct transaction
+
+Webhook processing failures must not silently mark payments as successful.
+
+20.17 Medical Aid Integration
+
+Medical Aid/Insurance must be treated as a financial integration rather than as a normal card payment provider.
+
+The architecture should support:
+
+Billing Service
+      ↓
+Financial Assessment
+      ↓
+Medical Aid Service / Adapter
+      ↓
+Verification / Authorisation / Claim
+      ↓
+Financial Responsibility
+      ↓
+Patient Co-payment if applicable
+
+The exact external Medical Aid integration must be implemented only after the relevant provider/API requirements are known.
+
+Health Nexus must not invent Medical Aid approval or claim status.
+
+20.18 Referral Integration
+
+The Referral Engine communicates with:
+
+Patient records
+Clinic capabilities
+Consent
+Receiving organisation
+Referral documents
+Workflow Engine
+Notifications
+
+Example:
+
+Doctor
+ ↓
+Referral Request
+ ↓
+Capability Check
+ ↓
+Referral Engine
+ ↓
+Consent
+ ↓
+Referral Package
+ ↓
+Receiving Clinic
+ ↓
+Referral Workflow
+
+The Referral Engine must control what information is shared.
+
+A receiving clinic must not receive unrestricted access to the referring clinic's medical database.
+
+20.19 Internal Referral API
+
+Internal referrals should contain only the authorised referral package.
+
+Possible information includes:
+
+Patient identity
+Referral reason
+Clinical summary
+Relevant results
+Relevant medication information
+Supporting documents
+Referring clinician
+Referral date
+Consent information
+
+The receiving organisation obtains access to the referral information according to the referral and permission model.
+
+20.20 External Referral
+
+External referrals may be generated for organisations outside Health Nexus.
+
+The system may produce:
+
+Referral letter
+Consultation summary
+Medication summary
+Laboratory summary
+Supporting documents
+
+The external organisation does not receive direct access to Health Nexus unless a future authorised integration explicitly supports it.
+
+20.21 Notification Integration
+
+Notifications remain a separate service.
+
+Other modules request notifications rather than implementing their own WhatsApp/email/SMS delivery logic.
+
+Example:
+
+Workflow Engine
+      ↓
+Notification Service
+      ↓
+Channel Selection
+      ↓
+WhatsApp / SMS / Email
+
+This prevents every module from implementing its own notification system.
+
+20.22 Workflow Integration
+
+The Workflow Engine remains the authority over patient movement.
+
+Services may produce workflow events or request workflow actions through authorised interfaces.
+
+They must not directly manipulate unrelated workflow state.
+
+Example:
+
+Laboratory Completed
+        ↓
+Laboratory Service
+        ↓
+Workflow Event
+        ↓
+Workflow Engine
+        ↓
+Return Patient to Doctor Queue
+
+AI follows the same rule.
+
+20.23 Event-Driven Integration
+
+Where appropriate, Health Nexus should use events for loosely coupled communication.
+
+Examples:
+
+appointment.created
+patient.checked_in
+queue.updated
+consultation.completed
+laboratory.completed
+prescription.created
+medication.dispensed
+invoice.created
+payment.completed
+referral.created
+followup.required
+
+Events should represent facts that occurred.
+
+An event should not secretly perform unrelated business operations.
+
+20.24 API Idempotency
+
+Operations that may be retried must support idempotency.
+
+This is particularly important for:
+
+Payment requests
+Payment webhooks
+Appointment creation
+Notifications
+WhatsApp message processing
+Referral creation
+
+Example:
+
+Request
+ ↓
+Operation ID
+ ↓
+Already processed?
+ ↓
+YES → Return existing result
+NO  → Process once
+
+This prevents duplicate appointments, payments, referrals or messages.
+
+20.25 Error Handling
+
+APIs must return predictable errors.
+
+Errors should distinguish between:
+
+Authentication failure
+Permission failure
+Invalid request
+Resource not found
+Conflict
+Validation failure
+External provider failure
+Internal system failure
+Temporary service unavailable
+
+External provider failures must not corrupt internal Health Nexus state.
+
+20.26 External Provider Failure
+
+If an external service fails:
+
+Yoco unavailable
+       ↓
+Payment not confirmed
+       ↓
+Health Nexus retains pending state
+       ↓
+Workflow follows configured payment policy
+
+Likewise:
+
+WhatsApp unavailable
+       ↓
+Communication failure
+       ↓
+Health Nexus workflow remains operational
+
+and:
+
+Ollama unavailable
+       ↓
+AI unavailable
+       ↓
+Existing manual workflow remains operational
+
+External integrations must therefore fail safely.
+
+20.27 API Logging
+
+API requests must provide sufficient operational logging to diagnose problems.
+
+Logs should include appropriate technical information such as:
+
+Request ID
+Service
+Endpoint
+Timestamp
+Outcome
+Error category
+External provider reference where applicable
+
+Sensitive patient information must not be unnecessarily written into ordinary logs.
+
+20.28 API Security
+
+All APIs must:
+
+Validate authentication.
+Validate authorisation.
+Validate organisation context.
+Validate clinic context.
+Respect RLS.
+Validate request input.
+Protect secrets.
+Use secure transport.
+Prevent unauthorised cross-tenant access.
+Avoid exposing internal implementation details.
+Log security-relevant events.
+20.29 API Versioning
+
+External and important internal APIs should support versioning where compatibility requires it.
+
+Example:
+
+/api/v1/appointments
+/api/v1/payments
+/api/v1/referrals
+/api/v1/ai
+
+Breaking changes should require a new API version or a documented migration strategy.
+
+Existing clients must not unexpectedly break because of a new AI feature.
+
+20.30 API Documentation
+
+Every significant API should document:
+
+Purpose
+Authentication
+Authorisation
+Request format
+Response format
+Validation
+Errors
+Permissions
+Organisation/clinic requirements
+Idempotency
+External dependencies
+Audit requirements
+
+API contracts should be kept alongside the implementation where practical.
+
+20.31 Integration Testing
+
+Every external integration must have integration tests.
+
+At minimum:
+
+WhatsApp
+Incoming webhook
+Invalid webhook
+Correct clinic identification
+Message processing
+Response delivery
+Yoco
+Payment initiation
+Successful payment
+Failed payment
+Duplicate webhook
+Invalid webhook
+Incorrect amount
+Refund
+Ollama
+Successful response
+Timeout
+Model unavailable
+Invalid AI output
+Safety rejection
+Referrals
+Internal referral
+Consent
+Missing consent
+External referral
+Referral status update
+20.32 Existing Service Preservation
+
+No new integration may replace an existing working service unless explicitly approved.
+
+Before modifying an existing integration, the implementation team must identify:
+
+Existing consumers
+Existing endpoints
+Existing database dependencies
+Existing workflows
+Existing tests
+Existing configuration
+Existing production behaviour
+
+Changes must maintain backward compatibility wherever possible.
+
+20.33 Integration Acceptance Criteria
+
+Part 20 is complete when:
+
+✓ Existing services are mapped.
+✓ Service ownership is defined.
+✓ APIs have clear boundaries.
+✓ Authentication is defined.
+✓ Authorisation is defined.
+✓ Organisation/clinic context is enforced.
+✓ Existing WhatsApp infrastructure is preserved.
+✓ ConversationAI integrates through the existing communication layer.
+✓ Yoco is isolated behind the Payment Gateway.
+✓ Payment webhooks are verified and idempotent.
+✓ Medical Aid integration has a defined extension point.
+✓ Referral integration respects consent and data isolation.
+✓ Notifications remain centralised.
+✓ Workflow Engine remains authoritative.
+✓ Events are defined where appropriate.
+✓ External failures are handled safely.
+✓ API errors are predictable.
+✓ Sensitive data is protected.
+✓ Integration testing is defined.
+✓ Existing functionality remains compatible.
+🔒 Part 20 Final Principle
+
+The most important rule is:
+
+Health Nexus integrations must extend the existing platform through controlled service boundaries. External providers and AI must never become the authority over Health Nexus business state.
+
+In other words:
+
+              EXISTING HEALTH NEXUS
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+     Workflow        Billing       Services
+        │              │              │
+        └──────────────┼──────────────┘
+                       │
+                  Integration
+                     Layer
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+       WhatsApp      Yoco        Ollama
+          │            │            │
+          ▼            ▼            ▼
+     Conversation    Payment        AI
+         AI          Provider      Runtime
