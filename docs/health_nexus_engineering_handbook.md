@@ -681,11 +681,29 @@ Pharmacy (Optional)
 
 ↓
 
-Invoice
+Invoice / Financial Assessment
 
 ↓
 
-Yoco Payment
+Financial Responsibility
+
+↓
+
+Payment / Funding Resolution
+
+↓
+
+Yoco / Cash / Card / EFT / Medical Aid /
+Co-payment / Sponsorship / Government Funding /
+Approved Payment Arrangement / No Charge
+
+↓
+
+Financial Requirement Resolved
+
+↓
+
+Workflow Engine
 
 ↓
 
@@ -7106,6 +7124,28 @@ The Workflow Engine should evaluate:
 11. Is a payment arrangement permitted?
 12. Is direct patient payment required?
 
+## Payment Resolution
+
+A financial requirement is considered resolved only when the applicable
+financial condition for that workflow stage has been satisfied.
+
+Examples include:
+
+- Required patient payment successfully completed.
+- Required manual payment confirmed by authorised staff.
+- Medical Aid / Insurance requirement successfully resolved according to
+  the applicable workflow.
+- Approved sponsorship or funding covers the applicable amount.
+- No payment is required.
+- An authorised payment arrangement has been approved where permitted.
+
+The Workflow Engine must determine whether the patient may proceed to the
+next workflow stage.
+
+AI must never determine that a financial requirement has been resolved
+without confirmation from the appropriate billing, funding or payment
+workflow.
+
 The result must produce a financial state.
 
 Possible states include:
@@ -7250,7 +7290,15 @@ Additional financial processing methods may include:
 - Donor Funding
 - Government Funding
 - Approved Payment Arrangement
+Payment arrangements are optional and clinic-configured.
 
+A clinic may disable payment arrangements entirely.
+
+When enabled, payment arrangements may only be approved or created by
+authorised staff according to clinic policy.
+
+AI may explain an existing payment arrangement but must never independently
+approve, create, modify or waive a payment arrangement.
 
 The Workflow Engine should automatically record:
 
@@ -7267,6 +7315,32 @@ When payment is completed successfully:
 - Patient Journey Timeline is updated.
 - Workflow History is updated.
 - Audit Log is created.
+
+
+## Offline and Manual Payment Handling
+
+Health Nexus must support payments that occur outside an online payment
+provider.
+
+Offline and manual payment methods include:
+
+- Cash
+- Manual bank card payment
+- EFT
+- Other clinic-configured payment methods
+
+Manual payments must be recorded by authorised staff.
+
+A patient must never be able to self-confirm that an offline payment has
+been received.
+
+The authorised staff member must confirm the payment according to clinic
+policy.
+
+Once confirmed, the payment must enter the same central financial and
+Workflow Engine process used by online payments.
+
+Manual payment processing must remain auditable and clinic-scoped.
 
 ---
 
@@ -11591,6 +11665,48 @@ Cashier responsibilities include:
 Yoco processes electronic payments only.
 
 The Cashier role is never replaced.
+
+## Offline / Manual Payments
+
+Health Nexus must support payments that occur outside an integrated online
+payment provider.
+
+Supported manual payment methods may include:
+
+- Cash
+- Manual card payment through an external card terminal
+- EFT / bank transfer
+- Other clinic-configured offline payment methods
+
+Manual payments must be recorded by an authorised staff member.
+
+A patient must never be able to self-confirm a payment as completed.
+
+For manual payments, the authorised staff member is responsible for confirming
+that the payment was received according to clinic policy.
+
+Once confirmed, the manual payment must enter the same central payment
+completion workflow used by online payments.
+
+The system must record:
+
+- Patient
+- Clinic
+- Invoice
+- Amount
+- Payment method
+- Payment status
+- Staff member who recorded or confirmed the payment
+- Date and time
+- Reference number where applicable
+
+Manual payments must not bypass:
+
+- Billing
+- Audit logging
+- Patient Journey Timeline
+- Workflow Engine
+- Financial reconciliation
 
 ---
 
