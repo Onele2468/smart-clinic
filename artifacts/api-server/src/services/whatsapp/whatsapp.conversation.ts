@@ -30,7 +30,7 @@ import { deliverPatientWhatsAppMessage, normalizePhoneNumber } from "./whatsapp.
 import type { ClinicWhatsAppConfig } from "./whatsapp.types";
 import { conversationAI } from "../ai/ConversationAI";
 import { workflowAI } from "../ai/WorkflowAI";
-import type { AIConversationIntent, AIConversationMemoryMessage } from "../ai/types";
+import type { AIConversationContext, AIConversationIntent, AIConversationMemoryMessage } from "../ai/types";
 import { WorkflowEvent } from "../../constants/workflowEvents";
 import {
   findAvailableSlots as findSchedulingAvailableSlots,
@@ -244,12 +244,6 @@ function friendlyMinutes(minutes: number): string {
   return `about ${hours} hour${hours === 1 ? "" : "s"} ${remainder} minute${remainder === 1 ? "" : "s"}`;
 }
 
-function clinicTypeLabel(type: string | null | undefined): string {
-  if (type === "government") return "government clinic";
-  if (type === "ngo") return "community clinic";
-  return "clinic";
-}
-
 function parseJsonObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
@@ -276,6 +270,67 @@ async function getBotSettings(clinicId: string) {
     .where(eq(clinicBotSettingsTable.clinicId, clinicId))
     .limit(1);
   return settings ?? null;
+}
+
+type WhatsAppAICapabilityProfile = {
+  capabilities: AIConversationContext["capabilities"];
+  allowWalkins: boolean;
+};
+
+async function resolveWhatsAppAICapabilityProfile(params: {
+  clinicId: string;
+  settings: Awaited<ReturnType<typeof getBotSettings>>;
+}): Promise<WhatsAppAICapabilityProfile> {
+  const [clinicRows, schedulingRows, departmentRows] = await Promise.all([
+    db.select({ billingEnabled: clinicsTable.billingEnabled })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, params.clinicId))
+      .limit(1),
+    db.select({
+      onlineBookingEnabled: clinicSettingsTable.onlineBookingEnabled,
+      whatsappSelfServiceBookingEnabled: clinicSettingsTable.whatsappSelfServiceBookingEnabled,
+      allowWalkins: clinicSettingsTable.allowWalkins,
+      openingTime: clinicSettingsTable.openingTime,
+      closingTime: clinicSettingsTable.closingTime,
+    })
+      .from(clinicSettingsTable)
+      .where(eq(clinicSettingsTable.clinicId, params.clinicId))
+      .limit(1),
+    db.select({ name: departmentsTable.name })
+      .from(departmentsTable)
+      .where(and(eq(departmentsTable.clinicId, params.clinicId), eq(departmentsTable.isActive, true))),
+  ]);
+
+  const clinic = clinicRows[0];
+  const scheduling = schedulingRows[0];
+  const bot = params.settings;
+  const selfServiceEnabled = Boolean(bot?.botEnabled && bot.selfServiceEnabled);
+  const bookingEnabled = Boolean(
+    selfServiceEnabled
+      && bot?.bookingEnabled
+      && scheduling?.onlineBookingEnabled
+      && scheduling?.whatsappSelfServiceBookingEnabled,
+  );
+  const departmentNames = departmentRows.map((department) => department.name.toLowerCase());
+  const hasClinicalDepartment = departmentNames.length > 0;
+  const hasLaboratory = departmentNames.some((name) => /\blab(oratory)?\b/.test(name));
+  const hasPharmacy = departmentNames.some((name) => /\bpharmacy\b/.test(name));
+
+  return {
+    capabilities: {
+      appointments: bookingEnabled,
+      cancellations: selfServiceEnabled && bookingEnabled,
+      clinicHours: Boolean(scheduling?.openingTime && scheduling?.closingTime),
+      doctorLookup: selfServiceEnabled && hasClinicalDepartment,
+      queueStatus: selfServiceEnabled,
+      referrals: selfServiceEnabled && hasClinicalDepartment,
+      laboratory: selfServiceEnabled && hasLaboratory,
+      prescriptions: selfServiceEnabled && hasPharmacy,
+      billing: selfServiceEnabled && Boolean(clinic?.billingEnabled),
+      receptionHandover: true,
+    },
+    allowWalkins: Boolean(scheduling?.allowWalkins),
+  };
 }
 
 async function getOrCreateConversation(params: {
@@ -1414,27 +1469,27 @@ Current stage: ${status}.
 ${waitLine}`;
 }
 
-async function handleClinicCapabilities(clinicId: string) {
-  const [clinic] = await db.select().from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1);
-  const [settings] = await db.select().from(clinicSettingsTable).where(eq(clinicSettingsTable.clinicId, clinicId)).limit(1);
-  const botSettings = await getBotSettings(clinicId);
+function handleClinicCapabilities(params: {
+  clinicName: string;
+  capabilities: AIConversationContext["capabilities"];
+  allowWalkins: boolean;
+}) {
   const supported: string[] = [];
 
-  if (botSettings?.bookingEnabled && settings?.onlineBookingEnabled) supported.push("appointment booking");
-  if (settings?.allowWalkins) supported.push("walk-in visits");
-  supported.push("queue updates");
-  supported.push("referral guidance");
-  supported.push("laboratory workflow updates");
-  supported.push("prescription and pharmacy guidance");
-  if (clinic?.billingEnabled) supported.push("billing and invoice support");
+  if (params.capabilities.appointments) supported.push("appointment booking");
+  if (params.allowWalkins) supported.push("walk-in visits");
+  if (params.capabilities.queueStatus) supported.push("queue updates");
+  if (params.capabilities.referrals) supported.push("referral guidance");
+  if (params.capabilities.laboratory) supported.push("laboratory workflow updates");
+  if (params.capabilities.prescriptions) supported.push("prescription and pharmacy guidance");
+  if (params.capabilities.billing) supported.push("billing and invoice support");
 
   const unavailable: string[] = [];
-  if (!clinic?.billingEnabled) unavailable.push("billing is not enabled for this clinic");
-  if (!settings?.onlineBookingEnabled || !botSettings?.bookingEnabled) unavailable.push("online appointment booking may need reception assistance");
+  if (!params.capabilities.billing) unavailable.push("billing and invoice support need reception assistance");
+  if (!params.capabilities.appointments) unavailable.push("online appointment booking needs reception assistance");
 
-  return `${clinic?.name ?? "This clinic"} is configured as a ${clinicTypeLabel(clinic?.clinicType)}.
+  return `${params.clinicName} can help with ${supported.length ? supported.join(", ") : "reception assistance"}.
 
-I can help with ${supported.join(", ")}.
 ${unavailable.length ? `\nA quick note: ${unavailable.join("; ")}.` : ""}
 
 For anything clinical, a nurse, doctor, laboratory staff member, or pharmacist will make the final decision.`;
@@ -1893,6 +1948,7 @@ async function handleIdleIntent(params: {
   messageText: string;
   phone: string;
   settings: Awaited<ReturnType<typeof getBotSettings>>;
+  capabilityProfile: WhatsAppAICapabilityProfile;
   intent: Intent;
 }): Promise<StateMachineResult> {
   const intent = params.intent;
@@ -2030,7 +2086,17 @@ async function handleIdleIntent(params: {
   }
 
   if (intent === "clinic_capabilities") {
-    return { reply: await handleClinicCapabilities(params.config.clinicId), nextState: "idle", patientId: params.patientId, intent, data: {} };
+    return {
+      reply: handleClinicCapabilities({
+        clinicName: params.config.clinicName,
+        capabilities: params.capabilityProfile.capabilities,
+        allowWalkins: params.capabilityProfile.allowWalkins,
+      }),
+      nextState: "idle",
+      patientId: params.patientId,
+      intent,
+      data: {},
+    };
   }
 
   if (intent === "my_doctor") {
@@ -2368,6 +2434,10 @@ async function handleConversationState(params: {
     case "idle":
     default: {
       const fallbackIntent = detectIntent(params.messageText);
+      const capabilityProfile = await resolveWhatsAppAICapabilityProfile({
+        clinicId: params.config.clinicId,
+        settings: params.settings,
+      });
       const aiDecision = await conversationAI.interpretWhatsAppMessage({
         clinicId: params.config.clinicId,
         clinicName: params.config.clinicName,
@@ -2376,6 +2446,7 @@ async function handleConversationState(params: {
         messageText: params.messageText,
         recentMessages: await loadConversationMemory(params.conversationId),
         fallbackIntent: fallbackIntent as AIConversationIntent,
+        capabilities: capabilityProfile.capabilities,
       });
       const intent = aiDecision.intent as Intent;
       logger.info(
@@ -2394,7 +2465,7 @@ async function handleConversationState(params: {
         },
         "AI_INTENT_DETECTED",
       );
-      if (aiDecision.suggestedReply && intent === "emergency") {
+      if (aiDecision.suggestedReply && (intent === "emergency" || intent === "speak_to_reception")) {
         await handleReception({
           clinicId: params.config.clinicId,
           patientId: params.patientId,
@@ -2409,7 +2480,7 @@ async function handleConversationState(params: {
           data: {},
         };
       }
-      return handleIdleIntent({ ...params, intent });
+      return handleIdleIntent({ ...params, capabilityProfile, intent });
     }
   }
 }

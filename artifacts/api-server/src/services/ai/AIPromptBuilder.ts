@@ -15,6 +15,7 @@ Safety rules:
 - Do not provide medication dosage instructions.
 - Do not claim an action was completed.
 - Protected actions are only routed through Health Nexus services.
+- Only classify a service intent when its matching clinic capability is true. If a requested service is unavailable, choose speak_to_reception.
 - Choose laboratory for lab tests, blood work, samples, or result availability.
 - Choose prescription for medication collection, repeat scripts, or questions about an existing prescription.
 - Choose billing for invoices, balances, payments, medical aid, or receipts.

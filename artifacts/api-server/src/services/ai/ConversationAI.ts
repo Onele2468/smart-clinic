@@ -6,6 +6,7 @@ import { aiSafetyLayer } from "./AISafetyLayer";
 import { generateWithOllama } from "./ollama.service";
 import type {
   AIConversationDecision,
+  AIConversationContext,
   AIConversationIntent,
   AIConversationMemoryMessage,
 } from "./types";
@@ -113,6 +114,27 @@ function parseModelDecision(raw: string): { intent: AIConversationIntent; confid
   }
 }
 
+function unavailableCapability(intent: AIConversationIntent, capabilities: AIConversationContext["capabilities"]): string | null {
+  const requiredCapability: Partial<Record<AIConversationIntent, keyof AIConversationContext["capabilities"]>> = {
+    book_appointment: "appointments",
+    check_appointment: "appointments",
+    cancel_appointment: "cancellations",
+    clinic_hours: "clinicHours",
+    my_doctor: "doctorLookup",
+    doctor_availability: "doctorLookup",
+    arrival_guidance: "appointments",
+    queue_status: "queueStatus",
+    referral: "referrals",
+    laboratory: "laboratory",
+    prescription: "prescriptions",
+    medicine: "prescriptions",
+    billing: "billing",
+    follow_up: "appointments",
+  };
+  const capability = requiredCapability[intent];
+  return capability && !capabilities[capability] ? capability : null;
+}
+
 export class ConversationAI {
   async interpretWhatsAppMessage(input: {
     clinicId: string;
@@ -122,6 +144,7 @@ export class ConversationAI {
     messageText: string;
     recentMessages?: AIConversationMemoryMessage[];
     fallbackIntent?: AIConversationIntent;
+    capabilities?: Partial<AIConversationContext["capabilities"]>;
   }): Promise<AIConversationDecision> {
     const context = aiContextEngine.buildConversationContext({
       channel: "whatsapp",
@@ -131,6 +154,7 @@ export class ConversationAI {
       patientId: input.patientId ?? null,
       messageText: input.messageText,
       recentMessages: input.recentMessages,
+      capabilities: input.capabilities,
     });
 
     const safety = aiSafetyLayer.assess(input.messageText);
@@ -153,12 +177,49 @@ export class ConversationAI {
     }
 
     const fallbackIntent = input.fallbackIntent ?? ruleIntent(input.messageText, input.recentMessages);
+    const unavailable = unavailableCapability(fallbackIntent, context.capabilities);
+    if (unavailable) {
+      const decision: AIConversationDecision = {
+        intent: "speak_to_reception",
+        confidence: aiConfidenceScoring.score({
+          fallbackMatched: true,
+          safetyOverride: false,
+          parsedModel: false,
+        }),
+        safety,
+        explanation: `Clinic capability ${unavailable} is unavailable.`,
+        suggestedReply:
+          "This service is not currently available through this clinic's WhatsApp service. I have asked reception to help you.",
+        source: "rules",
+      };
+      aiAuditLayer.recordDecision(context, decision);
+      return decision;
+    }
     const prompt = aiPromptBuilder.buildWhatsAppIntentPrompt(context);
 
     try {
       const modelResult = await generateWithOllama(prompt);
       const parsed = parseModelDecision(modelResult.response);
       if (parsed) {
+        const modelUnavailable = unavailableCapability(parsed.intent, context.capabilities);
+        if (modelUnavailable) {
+          const decision: AIConversationDecision = {
+            intent: "speak_to_reception",
+            confidence: aiConfidenceScoring.score({
+              modelConfidence: parsed.confidence,
+              fallbackMatched: fallbackIntent !== "unknown",
+              safetyOverride: false,
+              parsedModel: true,
+            }),
+            safety,
+            explanation: `Clinic capability ${modelUnavailable} is unavailable.`,
+            suggestedReply:
+              "This service is not currently available through this clinic's WhatsApp service. I have asked reception to help you.",
+            source: "rules",
+          };
+          aiAuditLayer.recordDecision(context, decision);
+          return decision;
+        }
         const decision: AIConversationDecision = {
           intent: parsed.intent,
           confidence: aiConfidenceScoring.score({

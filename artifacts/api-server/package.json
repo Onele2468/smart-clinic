@@ -9,7 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:conversation": "node --test test/whatsapp.conversation-architecture.test.mjs",
-    "test:payments": "node --test test/payment-gateway.architecture.test.mjs"
+    "test:payments": "node --test test/payment-gateway.architecture.test.mjs",
+    "test:ai": "node --test test/review-only-ai.architecture.test.mjs"
   },
   "dependencies": {
   "@workspace/api-zod": "workspace:*",

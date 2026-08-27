@@ -28,11 +28,6 @@ router.get("/", (req: Request, res: Response): void => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
   const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
-  
-  console.log("VERIFY TOKEN:", process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN);
-  console.log("TOKEN FROM META:", token);
-  console.log("MODE:", mode);
-  console.log("========================");
 
   if (mode === "subscribe" && token === verifyToken && typeof challenge === "string") {
     res.status(200).send(challenge);
@@ -86,15 +81,8 @@ router.post(
       else if (st === "failed") await updateDeliveryStatusByMetaId(metaId, "failed");
     }
     if (messages.length > 0) {
-  try {
-    console.log("Processing incoming WhatsApp message...");
-    await processIncomingWhatsAppMessage(payload);
-    console.log("Finished processing message.");
-  } catch (error) {
-    console.error("WHATSAPP ERROR:", error);
-    throw error;
-  }
-}
+      await processIncomingWhatsAppMessage(payload);
+    }
     res.status(200).send("EVENT_RECEIVED");
   },
 );

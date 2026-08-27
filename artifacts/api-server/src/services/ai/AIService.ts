@@ -1,8 +1,19 @@
 import { conversationAI } from "./ConversationAI";
 import { generateWithOllama } from "./ollama.service";
 import type { AIConversationMemoryMessage } from "./types";
+import { PromptService, type ReviewOnlyPurpose } from "./PromptService";
+
+const MAX_REVIEW_SOURCE_CHARS = 24_000;
+
+function boundedSourceData(sourceData: unknown): unknown {
+  const serialized = JSON.stringify(sourceData);
+  if (serialized.length <= MAX_REVIEW_SOURCE_CHARS) return sourceData;
+  return { truncated: true, source: serialized.slice(0, MAX_REVIEW_SOURCE_CHARS) };
+}
 
 export class AIService {
+  private prompts = new PromptService();
+
   async chat(prompt: string) {
     return generateWithOllama(prompt);
   }
@@ -18,28 +29,40 @@ export class AIService {
     return conversationAI.interpretWhatsAppMessage(input);
   }
 
-  async summarizeConsultation(data: unknown) {
-    return generateWithOllama(JSON.stringify({
-      task: "summarize_consultation",
-      safety: "AI assists only. A clinician must review the summary.",
-      data,
+  async reviewOnly(params: {
+    clinicId: string;
+    staffRole: string;
+    purpose: ReviewOnlyPurpose;
+    sourceData: unknown;
+  }) {
+    return generateWithOllama(this.prompts.reviewOnly({
+      ...params,
+      sourceData: boundedSourceData(params.sourceData),
     }));
   }
 
-  async explainMedication(data: unknown) {
-    return generateWithOllama(JSON.stringify({
-      task: "explain_medication",
-      safety: "Do not prescribe, change dosage, or replace pharmacist counselling.",
-      data,
-    }));
+  async summarizeConsultation(params: Omit<Parameters<AIService["reviewOnly"]>[0], "purpose">) {
+    return this.reviewOnly({ ...params, purpose: "doctor_consultation_summary" });
   }
 
-  async explainLabResults(data: unknown) {
-    return generateWithOllama(JSON.stringify({
-      task: "explain_lab_results",
-      safety: "Explain in plain language and instruct patient to discuss results with clinical staff.",
-      data,
-    }));
+  async summarizeNurseAssessment(params: Omit<Parameters<AIService["reviewOnly"]>[0], "purpose">) {
+    return this.reviewOnly({ ...params, purpose: "nurse_assessment_summary" });
+  }
+
+  async explainLabResults(params: Omit<Parameters<AIService["reviewOnly"]>[0], "purpose">) {
+    return this.reviewOnly({ ...params, purpose: "laboratory_result_explanation" });
+  }
+
+  async explainMedication(params: Omit<Parameters<AIService["reviewOnly"]>[0], "purpose">) {
+    return this.reviewOnly({ ...params, purpose: "prescription_explanation" });
+  }
+
+  async summarizeBilling(params: Omit<Parameters<AIService["reviewOnly"]>[0], "purpose">) {
+    return this.reviewOnly({ ...params, purpose: "billing_summary" });
+  }
+
+  async summarizeFollowUp(params: Omit<Parameters<AIService["reviewOnly"]>[0], "purpose">) {
+    return this.reviewOnly({ ...params, purpose: "follow_up_summary" });
   }
 
   async generateNotification(data: unknown) {

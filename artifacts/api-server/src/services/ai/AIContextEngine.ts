@@ -26,16 +26,18 @@ export class AIContextEngine {
       messageText: input.messageText,
       memory: aiMemory.build(input.recentMessages ?? []),
       capabilities: {
-        appointments: input.capabilities?.appointments ?? true,
-        cancellations: input.capabilities?.cancellations ?? true,
-        clinicHours: input.capabilities?.clinicHours ?? true,
-        doctorLookup: input.capabilities?.doctorLookup ?? true,
-        queueStatus: input.capabilities?.queueStatus ?? true,
-        referrals: input.capabilities?.referrals ?? true,
-        laboratory: input.capabilities?.laboratory ?? true,
-        prescriptions: input.capabilities?.prescriptions ?? true,
-        billing: input.capabilities?.billing ?? true,
-        receptionHandover: input.capabilities?.receptionHandover ?? true,
+        // Capabilities must be supplied by the authorised channel/service. Never
+        // assume a clinic provides a service when its configuration is unknown.
+        appointments: input.capabilities?.appointments ?? false,
+        cancellations: input.capabilities?.cancellations ?? false,
+        clinicHours: input.capabilities?.clinicHours ?? false,
+        doctorLookup: input.capabilities?.doctorLookup ?? false,
+        queueStatus: input.capabilities?.queueStatus ?? false,
+        referrals: input.capabilities?.referrals ?? false,
+        laboratory: input.capabilities?.laboratory ?? false,
+        prescriptions: input.capabilities?.prescriptions ?? false,
+        billing: input.capabilities?.billing ?? false,
+        receptionHandover: input.capabilities?.receptionHandover ?? false,
       },
     };
   }

@@ -8,6 +8,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const conversationSource = readFileSync(resolve(here, "../src/services/whatsapp/whatsapp.conversation.ts"), "utf8");
 const schedulingSource = readFileSync(resolve(here, "../src/services/scheduling.service.ts"), "utf8");
 const conversationAISource = readFileSync(resolve(here, "../src/services/ai/ConversationAI.ts"), "utf8");
+const contextEngineSource = readFileSync(resolve(here, "../src/services/ai/AIContextEngine.ts"), "utf8");
+const promptBuilderSource = readFileSync(resolve(here, "../src/services/ai/AIPromptBuilder.ts"), "utf8");
+const webhookSource = readFileSync(resolve(here, "../src/routes/whatsapp_webhook.ts"), "utf8");
 
 function extractSwitchCase(source, caseName) {
   const marker = `case "${caseName}":`;
@@ -150,4 +153,37 @@ test("ConversationAI does not own database writes or workflow side effects", () 
   assert.doesNotMatch(conversationAISource, /\.insert\(/);
   assert.doesNotMatch(conversationAISource, /\.update\(/);
   assert.doesNotMatch(conversationAISource, /\.delete\(/);
+});
+
+test("WhatsApp resolves clinic-scoped configuration before ConversationAI classification", () => {
+  assert.match(conversationSource, /resolveWhatsAppAICapabilityProfile/);
+  assert.match(conversationSource, /eq\(departmentsTable\.clinicId, params\.clinicId\)/);
+  assert.match(conversationSource, /eq\(departmentsTable\.isActive, true\)/);
+  assert.match(conversationSource, /capabilities:\s*capabilityProfile\.capabilities/);
+});
+
+test("unknown capability configuration fails closed and unavailable services hand off to reception", () => {
+  assert.match(contextEngineSource, /appointments: input\.capabilities\?\.appointments \?\? false/);
+  assert.doesNotMatch(contextEngineSource, /appointments: input\.capabilities\?\.appointments \?\? true/);
+  assert.match(conversationAISource, /unavailableCapability/);
+  assert.match(conversationAISource, /modelUnavailable = unavailableCapability/);
+  assert.match(conversationAISource, /intent: "speak_to_reception"/);
+  assert.match(conversationAISource, /not currently available through this clinic's WhatsApp service/);
+  assert.match(promptBuilderSource, /matching clinic capability is true/);
+});
+
+test("capability response is configuration-driven and does not use clinic type", () => {
+  const capabilityHandler = conversationSource.slice(
+    conversationSource.indexOf("function handleClinicCapabilities"),
+    conversationSource.indexOf("async function handleDoctorAvailability"),
+  );
+
+  assert.match(capabilityHandler, /params\.capabilities\.laboratory/);
+  assert.match(capabilityHandler, /params\.capabilities\.prescriptions/);
+  assert.doesNotMatch(capabilityHandler, /clinicType/);
+});
+
+test("WhatsApp webhook does not log verification credentials", () => {
+  assert.doesNotMatch(webhookSource, /console\.log\("VERIFY TOKEN/);
+  assert.doesNotMatch(webhookSource, /console\.log\("TOKEN FROM META/);
 });

@@ -1,73 +1,48 @@
+export type ReviewOnlyPurpose =
+  | "doctor_consultation_summary"
+  | "nurse_assessment_summary"
+  | "laboratory_result_explanation"
+  | "prescription_explanation"
+  | "billing_summary"
+  | "follow_up_summary";
+
+const PURPOSE_INSTRUCTIONS: Record<ReviewOnlyPurpose, string> = {
+  doctor_consultation_summary:
+    "Organise documented history, findings, and items requiring clinician review. Do not diagnose, recommend treatment, prescribe, or create a plan.",
+  nurse_assessment_summary:
+    "Organise documented symptoms, vital signs, and triage notes for nurse review. Do not diagnose, determine acuity, recommend treatment, or change workflow state.",
+  laboratory_result_explanation:
+    "Explain documented laboratory terminology and organise recorded values for authorised staff review. Do not approve results, diagnose, or state a medical conclusion.",
+  prescription_explanation:
+    "Explain only medication information already documented in the authorised prescription. Do not add, change, infer, or recommend dosage, frequency, duration, or dispensing decisions.",
+  billing_summary:
+    "Summarise the documented invoice, line items, payments, and payment status. Do not create, verify, change, or recommend payments, refunds, or financial decisions.",
+  follow_up_summary:
+    "Organise documented follow-up instructions and relevant existing timeline entries for staff review. Do not invent clinical instructions, appointments, diagnoses, or treatment plans.",
+};
+
 export class PromptService {
+  reviewOnly(params: {
+    purpose: ReviewOnlyPurpose;
+    clinicId: string;
+    staffRole: string;
+    sourceData: unknown;
+  }): string {
+    return `You are a Health Nexus review-only assistant.
 
-  consultationSummary(data: any): string {
-    return `
-You are the AI assistant inside Health-Nexus.
+Purpose: ${params.purpose}
+Authorised clinic: ${params.clinicId}
+Requesting staff role: ${params.staffRole}
 
-Summarize this completed consultation.
+${PURPOSE_INSTRUCTIONS[params.purpose]}
 
-Patient:
-${JSON.stringify(data, null, 2)}
+Safety rules:
+- Use only the documented source information below.
+- Return a concise draft for human review.
+- Do not diagnose, prescribe, approve results, dispense medication, execute payment, alter a record, or claim that an action occurred.
+- If source information is incomplete, identify it as requiring human review rather than filling gaps.
 
-Return:
-
-1. Short diagnosis
-2. Treatment given
-3. Medication prescribed
-4. Lab tests requested
-5. Follow-up instructions
-
-Keep the language simple enough for a patient.
-`;
+Authorised source data:
+${JSON.stringify(params.sourceData, null, 2)}`;
   }
-
-  medicationExplanation(data: any): string {
-    return `
-Explain the following medication in simple English.
-
-${JSON.stringify(data, null, 2)}
-
-Explain:
-
-• Why it was prescribed
-• How to take it
-• Possible side effects
-• When to return to the clinic
-`;
-  }
-
-  labExplanation(data: any): string {
-    return `
-Explain these laboratory results in simple language.
-
-${JSON.stringify(data, null, 2)}
-
-Avoid medical jargon.
-`;
-  }
-
-  whatsappReply(question: string): string {
-    return `
-You are the WhatsApp assistant for Health-Nexus.
-
-Patient asked:
-
-${question}
-
-Reply politely.
-
-If the patient asks about appointments,
-help with appointments.
-
-If the patient asks about medication,
-explain medication.
-
-If the patient asks about laboratory results,
-explain laboratory results.
-
-If this is an emergency,
-tell them to go to the nearest emergency department immediately.
-`;
-  }
-
 }
