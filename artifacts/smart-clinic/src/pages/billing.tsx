@@ -81,7 +81,6 @@ export default function Billing() {
   const queryClient = useQueryClient();
   const clinicId = clinicMembership?.clinicId ?? "";
   const role = clinicMembership?.role ?? "";
-  const clinicType = clinicMembership?.clinicType ?? "private";
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPayOpen, setIsPayOpen] = useState(false);
@@ -99,6 +98,24 @@ export default function Billing() {
     queryKey: ["invoices", clinicId, statusFilter],
     queryFn: () => apiFetch(`/clinics/${clinicId}/invoices${statusFilter !== "__all__" ? `?status=${statusFilter}` : ""}`),
     enabled: !!clinicId,
+  });
+
+  const { data: responsibilities = [] } = useQuery({
+    queryKey: ["financial-responsibilities", clinicId, selectedInvoice?.id],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice.id}/financial-responsibilities`),
+    enabled: !!clinicId && !!selectedInvoice?.id,
+  });
+
+  const { data: arrangements = [] } = useQuery({
+    queryKey: ["payment-arrangements", clinicId, selectedInvoice?.id],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice.id}/payment-arrangements`),
+    enabled: !!clinicId && !!selectedInvoice?.id,
+  });
+
+  const { data: awaitingEft = [] } = useQuery({
+    queryKey: ["awaiting-eft-verifications", clinicId],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/manual-payment-verifications`),
+    enabled: !!clinicId && ["clinic_admin", "cashier"].includes(role),
   });
 
   const { data: patients } = useListPatients(
@@ -158,6 +175,10 @@ export default function Billing() {
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankBranchCode, setBankBranchCode] = useState("");
   const [paymentReferenceInstructions, setPaymentReferenceInstructions] = useState("");
+  const [paymentTiming, setPaymentTiming] = useState("END_OF_VISIT");
+  const [allowedManualPaymentMethods, setAllowedManualPaymentMethods] = useState<string[]>(["cash", "card", "transfer", "mobile_money"]);
+  const [eftVerificationRequired, setEftVerificationRequired] = useState(false);
+  const [paymentArrangementsEnabled, setPaymentArrangementsEnabled] = useState(false);
   const [bankingInitialized, setBankingInitialized] = useState(false);
 
   React.useEffect(() => {
@@ -167,6 +188,10 @@ export default function Billing() {
       setBankAccountNumber(stats.bankAccountNumber ?? "");
       setBankBranchCode(stats.bankBranchCode ?? "");
       setPaymentReferenceInstructions(stats.paymentReferenceInstructions ?? "");
+      setPaymentTiming(stats.paymentTiming ?? "END_OF_VISIT");
+      setAllowedManualPaymentMethods(stats.allowedManualPaymentMethods ?? ["cash", "card", "transfer", "mobile_money"]);
+      setEftVerificationRequired(stats.eftVerificationRequired ?? false);
+      setPaymentArrangementsEnabled(stats.paymentArrangementsEnabled ?? false);
       setBankingInitialized(true);
     }
   }, [stats, bankingInitialized]);
@@ -180,6 +205,10 @@ export default function Billing() {
         bankAccountNumber: bankAccountNumber || null,
         bankBranchCode: bankBranchCode || null,
         paymentReferenceInstructions: paymentReferenceInstructions || null,
+        paymentTiming,
+        allowedManualPaymentMethods,
+        eftVerificationRequired,
+        paymentArrangementsEnabled,
       }),
     }),
     onSuccess: () => {
@@ -189,25 +218,19 @@ export default function Billing() {
     onError: (e: any) => toast({ variant: "destructive", title: "Failed to save banking details", description: e.message }),
   });
 
+  const verifyEftMutation = useMutation({
+    mutationFn: (verificationId: string) => apiFetch(`/clinics/${clinicId}/manual-payment-verifications/${verificationId}/verify`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["awaiting-eft-verifications", clinicId] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", clinicId] });
+      queryClient.invalidateQueries({ queryKey: ["billing-stats", clinicId] });
+      toast({ title: "EFT verified and payment completed" });
+    },
+    onError: (e: any) => toast({ variant: "destructive", title: "Unable to verify EFT", description: e.message }),
+  });
+
   if (statsLoading) {
     return <div className="p-8 space-y-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
-  }
-
-  if (clinicType === "government") {
-    return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="text-center py-16 space-y-4">
-          <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-            <Receipt className="h-8 w-8 text-green-600" />
-          </div>
-          <h2 className="text-2xl font-bold">Not Available</h2>
-          <p className="text-muted-foreground">
-            Billing is not available for Government clinics. Patients receive services free of charge
-            and no invoices or payment workflows are generated.
-          </p>
-        </div>
-      </div>
-    );
   }
 
   if (!billingEnabled) {
@@ -398,7 +421,24 @@ export default function Billing() {
       </Card>
 
       {/* Banking Details Management (admin only, non-government clinics) */}
-      {isAdmin && stats?.clinicType !== "government" && (
+      {["clinic_admin", "cashier"].includes(role) && awaitingEft.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">EFT Awaiting Manual Verification</CardTitle>
+            <CardDescription>These transfers do not complete a payment until a staff member verifies them.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {awaitingEft.map((verification: any) => (
+              <div key={verification.id} className="flex items-center justify-between gap-3 rounded border p-3 text-sm">
+                <span>Invoice {verification.invoiceId.slice(0, 8)} · R {Number(verification.amount).toFixed(2)}{verification.reference ? ` · ${verification.reference}` : ""}</span>
+                <Button size="sm" onClick={() => verifyEftMutation.mutate(verification.id)} disabled={verifyEftMutation.isPending}>Verify EFT</Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -407,7 +447,7 @@ export default function Billing() {
             </CardTitle>
             <CardDescription>
               Configure bank transfer details shown to patients on their invoice page.
-              Only visible to patients of private / NGO clinics.
+              Visible to patients where the clinic enables bank-transfer payment details.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -458,6 +498,25 @@ export default function Billing() {
                 Tell patients what to use as their payment reference (e.g. patient code or invoice number).
               </p>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t pt-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Payment Timing</label>
+                <Select value={paymentTiming} onValueChange={setPaymentTiming}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BEFORE_SERVICE">Before service</SelectItem>
+                    <SelectItem value="DURING_WORKFLOW">During workflow</SelectItem>
+                    <SelectItem value="AFTER_SERVICE">After service</SelectItem>
+                    <SelectItem value="END_OF_VISIT">End of visit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 pt-6 text-sm">
+                <label className="flex items-center gap-2"><input type="checkbox" checked={eftVerificationRequired} onChange={e => setEftVerificationRequired(e.target.checked)} /> Require manual EFT verification</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={paymentArrangementsEnabled} onChange={e => setPaymentArrangementsEnabled(e.target.checked)} /> Allow payment arrangements</label>
+                <div className="pt-1">Manual methods: {["cash", "card", "transfer", "mobile_money"].map(method => <label key={method} className="mr-3 inline-flex items-center gap-1"><input type="checkbox" checked={allowedManualPaymentMethods.includes(method)} onChange={e => setAllowedManualPaymentMethods(current => e.target.checked ? [...current, method] : current.filter(value => value !== method))} /> {method.replace("_", " ")}</label>)}</div>
+              </div>
+            </div>
             <div className="flex justify-end">
               <Button
                 onClick={() => saveBankingMutation.mutate()}
@@ -480,6 +539,12 @@ export default function Billing() {
             <div className="text-sm text-muted-foreground mb-2">
               <p><span className="font-medium">{selectedInvoice.invoiceCode}</span> — {selectedInvoice.patientName}</p>
               <p>Balance: <span className="font-semibold text-foreground">R {Number(selectedInvoice.balance).toFixed(2)}</span></p>
+              {responsibilities.length > 0 && (
+                <p className="mt-2 text-xs">Responsibilities: {responsibilities.map((item: any) => `${item.payerType} R ${Number(item.allocatedAmount).toFixed(2)}`).join(", ")}</p>
+              )}
+              {arrangements.length > 0 && (
+                <p className="mt-1 text-xs">Payment arrangements: {arrangements.map((item: any) => `${item.status} R ${Number(item.arrangementAmount).toFixed(2)}`).join(", ")}</p>
+              )}
             </div>
           )}
           <Form {...payForm}>

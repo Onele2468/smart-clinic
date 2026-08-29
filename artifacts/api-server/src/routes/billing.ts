@@ -2,7 +2,8 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import {
   invoicesTable, invoiceItemsTable, paymentsTable,
-  patientsTable, usersTable, clinicsTable,
+  patientsTable, usersTable, clinicsTable, financialResponsibilityAllocationsTable,
+  manualPaymentVerificationsTable, paymentArrangementsTable,
 } from "@workspace/db";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { requireAuth, requireClinicMember, requireRole, requireClinicModule } from "../lib/auth";
@@ -15,6 +16,10 @@ import {
 } from "../services/whatsapp/operationalAlerts.triggers";
 import { stripWhatsappFieldsFromUpdate, toPublicClinic } from "../lib/clinicSerializer";
 import { z } from "zod";
+import {
+  approvePaymentArrangement, cancelPaymentArrangement, claimManualTransferVerification, createManualTransferVerification,
+  createPaymentArrangement, createResponsibilityAllocation, reopenManualTransferVerification,
+} from "../services/billing/financial-foundation.service";
 
 const router: IRouter = Router();
 
@@ -38,6 +43,18 @@ const RecordPaymentBody = z.object({
   amount: z.number().min(0.01),
   paymentMethod: z.enum(["cash", "card", "transfer", "mobile_money"]),
   reference: z.string().optional(),
+});
+
+const ResponsibilityBody = z.object({
+  payerType: z.enum(["patient", "medical_aid", "government", "ngo", "donor", "sponsor", "clinic"]),
+  payerReference: z.string().max(200).optional().nullable(),
+  authorizationReference: z.string().max(200).optional().nullable(),
+  claimStatus: z.enum(["not_applicable", "pending", "authorised", "declined", "settled"]).optional(),
+  allocatedAmount: z.number().min(0),
+});
+
+const ArrangementBody = z.object({
+  arrangementAmount: z.number().positive(), terms: z.string().max(2000).optional().nullable(), schedule: z.string().max(1000).optional().nullable(),
 });
 
 async function getClinicOrFail(clinicId: string, res: any): Promise<typeof clinicsTable.$inferSelect | null> {
@@ -218,6 +235,66 @@ router.get("/clinics/:clinicId/invoices/:invoiceId", requireAuth as any, require
   res.json({ ...invoice, items, payments });
 });
 
+router.get("/clinics/:clinicId/invoices/:invoiceId/financial-responsibilities", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier", "receptionist") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const invoiceId = Array.isArray(req.params.invoiceId) ? req.params.invoiceId[0] : req.params.invoiceId;
+  const allocations = await db.select().from(financialResponsibilityAllocationsTable)
+    .where(and(eq(financialResponsibilityAllocationsTable.clinicId, clinicId), eq(financialResponsibilityAllocationsTable.invoiceId, invoiceId)));
+  res.json(allocations);
+});
+
+router.post("/clinics/:clinicId/invoices/:invoiceId/financial-responsibilities", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier", "receptionist") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const invoiceId = Array.isArray(req.params.invoiceId) ? req.params.invoiceId[0] : req.params.invoiceId;
+  const parsed = ResponsibilityBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const [invoice] = await db.select().from(invoicesTable).where(and(eq(invoicesTable.id, invoiceId), eq(invoicesTable.clinicId, clinicId)));
+  if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+  try {
+    const allocation = await createResponsibilityAllocation({ ...parsed.data, clinicId, invoiceId, patientId: invoice.patientId, createdById: (req as any).user.userId });
+    logActivity({ clinicId, userId: (req as any).user.userId, userRole: (req as any).clinicMember.role, module: "billing", actionType: "financial_responsibility_created", type: "financial_responsibility_created", message: `Financial responsibility allocation recorded for invoice ${invoice.invoiceCode}.`, entityId: allocation.id, suppressWhatsAppDispatch: true });
+    res.status(201).json(allocation);
+  } catch (err: unknown) { res.status(400).json({ error: err instanceof Error ? err.message : "Unable to create allocation" }); }
+});
+
+router.get("/clinics/:clinicId/invoices/:invoiceId/payment-arrangements", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier", "receptionist") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const invoiceId = Array.isArray(req.params.invoiceId) ? req.params.invoiceId[0] : req.params.invoiceId;
+  const arrangements = await db.select().from(paymentArrangementsTable).where(and(eq(paymentArrangementsTable.clinicId, clinicId), eq(paymentArrangementsTable.invoiceId, invoiceId)));
+  res.json(arrangements);
+});
+
+router.post("/clinics/:clinicId/invoices/:invoiceId/payment-arrangements", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const invoiceId = Array.isArray(req.params.invoiceId) ? req.params.invoiceId[0] : req.params.invoiceId;
+  const parsed = ArrangementBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const [clinic, invoice] = await Promise.all([getClinicOrFail(clinicId, res), db.select().from(invoicesTable).where(and(eq(invoicesTable.id, invoiceId), eq(invoicesTable.clinicId, clinicId))).limit(1)]);
+  if (!clinic || !invoice[0]) { if (clinic) res.status(404).json({ error: "Invoice not found" }); return; }
+  if (!clinic.paymentArrangementsEnabled) { res.status(403).json({ error: "Payment arrangements are disabled for this clinic" }); return; }
+  const arrangement = await createPaymentArrangement({ ...parsed.data, clinicId, invoiceId, patientId: invoice[0].patientId, createdById: (req as any).user.userId });
+  logActivity({ clinicId, userId: (req as any).user.userId, userRole: (req as any).clinicMember.role, module: "billing", actionType: "payment_arrangement_requested", type: "payment_arrangement_requested", message: `Payment arrangement requested for invoice ${invoice[0].invoiceCode}.`, entityId: arrangement.id, suppressWhatsAppDispatch: true });
+  res.status(201).json(arrangement);
+});
+
+router.post("/clinics/:clinicId/payment-arrangements/:arrangementId/approve", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const arrangementId = Array.isArray(req.params.arrangementId) ? req.params.arrangementId[0] : req.params.arrangementId;
+  const arrangement = await approvePaymentArrangement({ clinicId, arrangementId, approvedById: (req as any).user.userId });
+  if (!arrangement) { res.status(404).json({ error: "Requested payment arrangement not found" }); return; }
+  logActivity({ clinicId, userId: (req as any).user.userId, userRole: (req as any).clinicMember.role, module: "billing", actionType: "payment_arrangement_approved", type: "payment_arrangement_approved", message: "Payment arrangement approved.", entityId: arrangement.id, suppressWhatsAppDispatch: true });
+  res.json(arrangement);
+});
+
+router.post("/clinics/:clinicId/payment-arrangements/:arrangementId/cancel", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const arrangementId = Array.isArray(req.params.arrangementId) ? req.params.arrangementId[0] : req.params.arrangementId;
+  const arrangement = await cancelPaymentArrangement({ clinicId, arrangementId, cancelledById: (req as any).user.userId });
+  if (!arrangement) { res.status(404).json({ error: "Active payment arrangement not found" }); return; }
+  logActivity({ clinicId, userId: (req as any).user.userId, userRole: (req as any).clinicMember.role, module: "billing", actionType: "payment_arrangement_cancelled", type: "payment_arrangement_cancelled", message: "Payment arrangement cancelled.", entityId: arrangement.id, suppressWhatsAppDispatch: true });
+  res.json(arrangement);
+});
+
 // Record payment on invoice
 router.post("/clinics/:clinicId/invoices/:invoiceId/payments", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier", "receptionist") as any, async (req, res): Promise<void> => {
   const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
@@ -250,6 +327,19 @@ router.post("/clinics/:clinicId/invoices/:invoiceId/payments", requireAuth as an
   }
 
   const { amount, paymentMethod, reference } = parsed.data;
+  const allowedMethods = Array.isArray(clinic.allowedManualPaymentMethods) ? clinic.allowedManualPaymentMethods : [];
+  if (!allowedMethods.includes(paymentMethod)) {
+    res.status(403).json({ error: "This manual payment method is disabled for this clinic" });
+    return;
+  }
+  if (paymentMethod === "transfer" && clinic.eftVerificationRequired) {
+    const verification = await createManualTransferVerification({
+      clinicId, invoiceId, patientId: invoice.patientId, amount, reference: reference ?? null, createdById: user.userId,
+    });
+    logActivity({ clinicId, userId: user.userId, userRole: (req as any).clinicMember.role, module: "billing", actionType: "eft_awaiting_manual_verification", type: "eft_awaiting_manual_verification", message: `EFT payment submitted for manual verification on invoice ${invoice.invoiceCode}.`, entityId: verification.id, suppressWhatsAppDispatch: true });
+    res.status(202).json({ verification, status: "awaiting_manual_verification" });
+    return;
+  }
   const result = await processWorkflowEvent(WorkflowEvent.PAYMENT_COMPLETED, {
     clinicId,
     invoiceId,
@@ -264,6 +354,30 @@ router.post("/clinics/:clinicId/invoices/:invoiceId/payments", requireAuth as an
   }) as any;
 
   res.status(201).json({ payment: result.payment, invoice: result.invoice, receipt: result.receipt, visitSummary: result.visitSummary });
+});
+
+router.get("/clinics/:clinicId/manual-payment-verifications", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const rows = await db.select().from(manualPaymentVerificationsTable).where(and(eq(manualPaymentVerificationsTable.clinicId, clinicId), eq(manualPaymentVerificationsTable.status, "awaiting_manual_verification")));
+  res.json(rows);
+});
+
+router.post("/clinics/:clinicId/manual-payment-verifications/:verificationId/verify", requireAuth as any, requireClinicMember as any, requireClinicModule("billing") as any, requireRole("clinic_admin", "cashier") as any, async (req, res): Promise<void> => {
+  const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+  const verificationId = Array.isArray(req.params.verificationId) ? req.params.verificationId[0] : req.params.verificationId;
+  const user = (req as any).user;
+  const verification = await claimManualTransferVerification({ clinicId, verificationId, verifiedById: user.userId });
+  if (!verification) { res.status(404).json({ error: "Awaiting EFT verification not found" }); return; }
+  try {
+    const result = await processWorkflowEvent(WorkflowEvent.PAYMENT_COMPLETED, {
+      clinicId, invoiceId: verification.invoiceId, patientId: verification.patientId, amount: Number(verification.amount), paymentMethod: "transfer", reference: verification.reference, receivedById: user.userId, userRole: (req as any).clinicMember.role, source: "manual", paidAt: new Date(),
+    }) as any;
+    logActivity({ clinicId, userId: user.userId, userRole: (req as any).clinicMember.role, module: "billing", actionType: "eft_manual_verification_completed", type: "eft_manual_verification_completed", message: "EFT payment verified and completed through the payment workflow.", entityId: verification.id, suppressWhatsAppDispatch: true });
+    res.json({ verification, payment: result.payment, invoice: result.invoice, receipt: result.receipt });
+  } catch (err: unknown) {
+    await reopenManualTransferVerification({ clinicId, verificationId });
+    res.status(400).json({ error: err instanceof Error ? err.message : "Unable to complete verified EFT payment" });
+  }
 });
 
 // Billing stats for clinic
@@ -322,6 +436,10 @@ router.get("/clinics/:clinicId/billing/stats", requireAuth as any, requireClinic
     paymentCurrency: clinic.paymentCurrency ?? "ZAR",
     paymentProviderConnectionStatus: clinic.paymentProviderConnectionStatus ?? "not_configured",
     paymentProviderWebhookStatus: clinic.paymentProviderWebhookStatus ?? "not_configured",
+    paymentTiming: clinic.paymentTiming,
+    allowedManualPaymentMethods: clinic.allowedManualPaymentMethods,
+    eftVerificationRequired: clinic.eftVerificationRequired,
+    paymentArrangementsEnabled: clinic.paymentArrangementsEnabled,
     paymentProviderPublicKeyConfigured: !!((clinic.paymentProviderCredentials as any)?.publicKey),
     paymentProviderConfigured: !!((clinic.paymentProviderCredentials as any)?.secretKey),
     paymentProviderWebhookConfigured: !!((clinic.paymentProviderCredentials as any)?.webhookSecret),
@@ -349,6 +467,10 @@ router.patch("/clinics/:clinicId/billing/settings", requireAuth as any, requireC
     paymentProviderPublicKey: z.string().optional().nullable(),
     paymentProviderSecretKey: z.string().optional().nullable(),
     paymentProviderWebhookSecret: z.string().optional().nullable(),
+    paymentTiming: z.enum(["BEFORE_SERVICE", "DURING_WORKFLOW", "AFTER_SERVICE", "END_OF_VISIT"]).optional(),
+    allowedManualPaymentMethods: z.array(z.enum(["cash", "card", "transfer", "mobile_money"])).min(1).optional(),
+    eftVerificationRequired: z.boolean().optional(),
+    paymentArrangementsEnabled: z.boolean().optional(),
   });
 
   const parsed = UpdateBillingSettings.safeParse(req.body);
@@ -383,6 +505,21 @@ router.patch("/clinics/:clinicId/billing/settings", requireAuth as any, requireC
     .set(stripWhatsappFieldsFromUpdate(update))
     .where(eq(clinicsTable.id, clinicId))
     .returning();
+  const financialPolicyFields = ["paymentTiming", "allowedManualPaymentMethods", "eftVerificationRequired", "paymentArrangementsEnabled"];
+  const changedFinancialPolicy = financialPolicyFields.filter(field => field in parsed.data);
+  if (changedFinancialPolicy.length > 0) {
+    logActivity({
+      clinicId,
+      userId: (req as any).user.userId,
+      userRole: (req as any).clinicMember.role,
+      module: "billing",
+      actionType: "financial_policy_updated",
+      type: "financial_policy_updated",
+      message: `Financial policy updated: ${changedFinancialPolicy.join(", ")}.`,
+      entityId: clinic.id,
+      suppressWhatsAppDispatch: true,
+    });
+  }
   res.json(toPublicClinic(clinic));
 });
 

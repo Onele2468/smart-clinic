@@ -410,7 +410,8 @@ export function requireRole(...roles: string[]) {
 
 /**
  * Blocks access for government clinics to modules that are not part of their
- * workflow (billing, pharmacy, laboratory, inventory, suppliers).
+ * workflow (pharmacy, laboratory, inventory, suppliers). Billing is instead
+ * controlled by the clinic's existing billingEnabled setting.
  * Must be used after requireClinicMember (so clinicId param is present).
  */
 export function requireClinicModule(module: string) {
@@ -424,11 +425,19 @@ export function requireClinicModule(module: string) {
     if (!clinicId) { next(); return; }
 
     const [clinic] = await db
-      .select({ clinicType: clinicsTable.clinicType })
+      .select({ clinicType: clinicsTable.clinicType, billingEnabled: clinicsTable.billingEnabled })
       .from(clinicsTable)
       .where(eq(clinicsTable.id, clinicId));
 
-    if (clinic?.clinicType === "government") {
+    if (module === "billing" && clinic && !clinic.billingEnabled) {
+      res.status(403).json({
+        error: "The 'billing' module is disabled for this clinic.",
+        code: "MODULE_UNAVAILABLE",
+      });
+      return;
+    }
+
+    if (module !== "billing" && clinic?.clinicType === "government") {
       res.status(403).json({
         error: `The '${module}' module is not available for Government clinics.`,
         code: "MODULE_UNAVAILABLE",

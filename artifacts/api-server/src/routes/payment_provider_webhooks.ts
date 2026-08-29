@@ -48,6 +48,24 @@ router.post("/:provider/:clinicId", async (req, res): Promise<void> => {
       return;
     }
 
+    if (transaction.clinicId !== clinicId) {
+      logger.warn({ provider, clinicId, transactionClinicId: transaction.clinicId, transactionId: transaction.id }, "Payment provider event clinic mismatch");
+      res.status(400).json({ error: "Provider transaction does not belong to webhook clinic" });
+      return;
+    }
+
+    if (event.currency && event.currency !== transaction.currency) {
+      logger.warn({ provider, clinicId, transactionId: transaction.id, eventCurrency: event.currency, transactionCurrency: transaction.currency }, "Payment provider event currency mismatch");
+      res.status(400).json({ error: "Provider payment currency does not match transaction" });
+      return;
+    }
+
+    if (event.status === "paid" && (event.amount === null || event.amount === undefined || Number(event.amount) !== Number(transaction.amount))) {
+      logger.warn({ provider, clinicId, transactionId: transaction.id, eventAmount: event.amount, transactionAmount: transaction.amount }, "Payment provider event amount mismatch");
+      res.status(400).json({ error: "Provider payment amount does not match transaction" });
+      return;
+    }
+
     if (event.status === "paid") {
       const paidTransaction = await markProviderTransactionPaidOnce({
         transactionId: transaction.id,

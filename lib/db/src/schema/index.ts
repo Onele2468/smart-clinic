@@ -31,3 +31,4 @@ export * from "./doctor_availability";
 export * from "./referrals";
 export * from "./payment_provider_transactions";
 export * from "./patient_journey_timeline";
+export * from "./financial_foundation";
