@@ -1,6 +1,7 @@
 import { WorkflowEvent } from "../../constants/workflowEvents";
 import { logActivity } from "../../lib/activityLogger";
 import { recordInvoicePayment } from "../billing/billing.service";
+import { completeInvoiceRefund } from "../billing/refund.service";
 import { recordPatientJourneyEvent } from "../patient-journey/timeline.service";
 import { notifyStaffWorkflow } from "../notifications/workflow-notifications.service";
 import { generateVisitSummary } from "./visit-summary.service";
@@ -30,9 +31,20 @@ export async function processWorkflowEvent(event: WorkflowEvent, data: unknown) 
         providerTransactionId?: string | null;
         reason?: string | null;
       });
+    case WorkflowEvent.PAYMENT_REFUNDED:
+      return processPaymentRefunded(data as { clinicId: string; refundId: string; patientId: string; userId?: string | null; userRole?: string | null; });
     default:
       return null;
   }
+}
+
+async function processPaymentRefunded(params: { clinicId: string; refundId: string; patientId: string; userId?: string | null; userRole?: string | null; }) {
+  const result = await completeInvoiceRefund({ clinicId: params.clinicId, refundId: params.refundId });
+  if (!result) return { duplicate: true };
+  await recordPatientJourneyEvent({ clinicId: params.clinicId, patientId: params.patientId, actorUserId: params.userId ?? null, module: "billing", eventType: WorkflowEvent.PAYMENT_REFUNDED, title: "Payment refunded", description: `Refund of ZAR ${Number(result.refund.amount).toFixed(2)} completed.`, entityType: "payment_refund", entityId: result.refund.id, metadata: { paymentId: result.refund.paymentId, invoiceId: result.invoice.id, origin: result.refund.origin } });
+  logActivity({ clinicId: params.clinicId, userId: params.userId ?? null, userRole: params.userRole ?? "payment_gateway", module: "billing", actionType: "payment_refunded", type: "payment_refunded", message: `Refund of ZAR ${Number(result.refund.amount).toFixed(2)} completed for invoice ${result.invoice.invoiceCode}.`, entityId: result.refund.id, suppressWhatsAppDispatch: true });
+  await notifyStaffWorkflow({ clinicId: params.clinicId, roles: ["clinic_admin", "cashier", "receptionist"], type: "billing", title: "Payment refunded", message: `Refund of ZAR ${Number(result.refund.amount).toFixed(2)} completed for invoice ${result.invoice.invoiceCode}.`, entityId: result.refund.id, targetUrl: "/billing" });
+  return result;
 }
 
 async function processPaymentCompleted(params: {
@@ -175,5 +187,6 @@ async function processPaymentFailed(params: {
     message: params.reason ?? "Online payment attempt failed.",
     entityId: params.invoiceId ?? params.providerTransactionId ?? null,
   });
+  await notifyStaffWorkflow({ clinicId: params.clinicId, roles: ["clinic_admin", "cashier", "receptionist"], type: "billing", title: "Payment failed", message: params.reason ?? "An online payment attempt failed.", entityId: params.invoiceId ?? params.providerTransactionId ?? null, targetUrl: "/billing" });
   return { success: true };
 }

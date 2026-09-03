@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import type {
   CreateCheckoutInput,
   CreateCheckoutResult,
+  RefundPaymentInput,
+  RefundPaymentResult,
   PaymentGateway,
   PaymentGatewayConfig,
   VerifiedProviderEvent,
@@ -83,6 +85,22 @@ export class YocoProvider implements PaymentGateway {
     };
   }
 
+  async refundPayment(config: PaymentGatewayConfig, input: RefundPaymentInput): Promise<RefundPaymentResult> {
+    this.validateCurrency(input.currency);
+    if (!config.credentials.secretKey) throw new Error("Yoco secret key is not configured for this clinic");
+    const response = await fetch(`${YOCO_CHECKOUT_URL}/${encodeURIComponent(input.providerCheckoutId)}/refund`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.credentials.secretKey}`, "Content-Type": "application/json", "Idempotency-Key": input.idempotencyKey },
+      body: JSON.stringify({ amount: toCents(input.amount), metadata: input.metadata ?? {} }),
+    });
+    const payload = asRecord(await response.json().catch(() => ({})));
+    if (!response.ok) throw new Error(`Yoco refund failed: ${typeof payload.message === "string" ? payload.message : response.statusText}`);
+    const status = payload.status === "pending" ? "pending" : "succeeded";
+    const refundId = payload.refundId;
+    if (typeof refundId !== "string" || !refundId) throw new Error("Yoco refund response did not include a refund ID");
+    return { providerRefundId: refundId, status, rawProviderPayload: payload };
+  }
+
   verifyWebhook(config: PaymentGatewayConfig, rawBody: Buffer, headers: Record<string, string | string[] | undefined>): VerifiedProviderEvent {
     if (!config.credentials.webhookSecret) {
       throw new Error("Yoco webhook secret is not configured for this clinic");
@@ -119,6 +137,7 @@ export class YocoProvider implements PaymentGateway {
       eventType,
       providerCheckoutId: checkoutId ? String(checkoutId) : null,
       providerTransactionId: payload.id ? String(payload.id) : null,
+      providerRefundId: payload.refundId ? String(payload.refundId) : null,
       amount: typeof payload.amount === "number" ? payload.amount / 100 : null,
       currency: typeof payload.currency === "string" ? payload.currency : null,
       paymentMethod,

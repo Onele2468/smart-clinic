@@ -11,7 +11,8 @@
     "test:conversation": "node --test test/whatsapp.conversation-architecture.test.mjs",
     "test:payments": "node --test test/payment-gateway.architecture.test.mjs",
     "test:ai": "node --test test/review-only-ai.architecture.test.mjs",
-    "test:financial": "node --test test/financial-foundation.architecture.test.mjs"
+    "test:financial": "node --test test/financial-foundation.architecture.test.mjs",
+    "test:financial-experience": "node --test test/payment-experience.architecture.test.mjs"
   },
   "dependencies": {
   "@workspace/api-zod": "workspace:*",

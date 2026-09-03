@@ -1,8 +1,7 @@
 ALTER TABLE "clinics"
   ADD COLUMN IF NOT EXISTS "payment_timing" text DEFAULT 'END_OF_VISIT' NOT NULL,
   ADD COLUMN IF NOT EXISTS "allowed_manual_payment_methods" jsonb DEFAULT '["cash","card","transfer","mobile_money"]'::jsonb NOT NULL,
-  ADD COLUMN IF NOT EXISTS "eft_verification_required" boolean DEFAULT false NOT NULL,
-  ADD COLUMN IF NOT EXISTS "payment_arrangements_enabled" boolean DEFAULT false NOT NULL;
+  ADD COLUMN IF NOT EXISTS "eft_verification_required" boolean DEFAULT false NOT NULL;
 
 CREATE TABLE IF NOT EXISTS "financial_responsibility_allocations" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -22,26 +21,6 @@ CREATE TABLE IF NOT EXISTS "financial_responsibility_allocations" (
   CONSTRAINT "financial_responsibility_allocations_amount_check" CHECK ("allocated_amount" >= 0),
   CONSTRAINT "financial_responsibility_allocations_claim_status_check" CHECK ("claim_status" IN ('not_applicable','pending','authorised','declined','settled')),
   CONSTRAINT "financial_responsibility_allocations_status_check" CHECK ("status" IN ('not_required','due','pending','partially_paid','completed','cancelled'))
-);
-
-CREATE TABLE IF NOT EXISTS "payment_arrangements" (
-  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  "clinic_id" uuid NOT NULL,
-  "invoice_id" uuid NOT NULL,
-  "patient_id" uuid NOT NULL,
-  "arrangement_amount" numeric(12, 2) NOT NULL,
-  "terms" text,
-  "schedule" text,
-  "status" text DEFAULT 'requested' NOT NULL,
-  "created_by_id" uuid NOT NULL,
-  "approved_by_id" uuid,
-  "approved_at" timestamp with time zone,
-  "cancelled_by_id" uuid,
-  "cancelled_at" timestamp with time zone,
-  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-  "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-  CONSTRAINT "payment_arrangements_amount_check" CHECK ("arrangement_amount" > 0),
-  CONSTRAINT "payment_arrangements_status_check" CHECK ("status" IN ('requested','approved','active','completed','cancelled','defaulted'))
 );
 
 CREATE TABLE IF NOT EXISTS "manual_payment_verifications" (
@@ -71,14 +50,6 @@ DO $$ BEGIN
   ALTER TABLE "financial_responsibility_allocations" ADD CONSTRAINT "financial_responsibility_allocations_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id");
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN
-  ALTER TABLE "payment_arrangements" ADD CONSTRAINT "payment_arrangements_clinic_id_clinics_id_fk" FOREIGN KEY ("clinic_id") REFERENCES "public"."clinics"("id");
-  ALTER TABLE "payment_arrangements" ADD CONSTRAINT "payment_arrangements_invoice_id_invoices_id_fk" FOREIGN KEY ("invoice_id") REFERENCES "public"."invoices"("id");
-  ALTER TABLE "payment_arrangements" ADD CONSTRAINT "payment_arrangements_patient_id_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."patients"("id");
-  ALTER TABLE "payment_arrangements" ADD CONSTRAINT "payment_arrangements_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id");
-  ALTER TABLE "payment_arrangements" ADD CONSTRAINT "payment_arrangements_approved_by_id_users_id_fk" FOREIGN KEY ("approved_by_id") REFERENCES "public"."users"("id");
-  ALTER TABLE "payment_arrangements" ADD CONSTRAINT "payment_arrangements_cancelled_by_id_users_id_fk" FOREIGN KEY ("cancelled_by_id") REFERENCES "public"."users"("id");
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-DO $$ BEGIN
   ALTER TABLE "manual_payment_verifications" ADD CONSTRAINT "manual_payment_verifications_clinic_id_clinics_id_fk" FOREIGN KEY ("clinic_id") REFERENCES "public"."clinics"("id");
   ALTER TABLE "manual_payment_verifications" ADD CONSTRAINT "manual_payment_verifications_invoice_id_invoices_id_fk" FOREIGN KEY ("invoice_id") REFERENCES "public"."invoices"("id");
   ALTER TABLE "manual_payment_verifications" ADD CONSTRAINT "manual_payment_verifications_patient_id_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."patients"("id");
@@ -87,7 +58,6 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 CREATE INDEX IF NOT EXISTS "financial_responsibility_allocations_invoice_idx" ON "financial_responsibility_allocations" ("clinic_id", "invoice_id");
-CREATE INDEX IF NOT EXISTS "payment_arrangements_invoice_idx" ON "payment_arrangements" ("clinic_id", "invoice_id", "status");
 CREATE INDEX IF NOT EXISTS "manual_payment_verifications_invoice_idx" ON "manual_payment_verifications" ("clinic_id", "invoice_id", "status");
 
 CREATE OR REPLACE FUNCTION "validate_financial_responsibility_total"() RETURNS trigger AS $$
@@ -104,8 +74,6 @@ DROP TRIGGER IF EXISTS "financial_responsibility_total_check" ON "financial_resp
 CREATE TRIGGER "financial_responsibility_total_check" BEFORE INSERT OR UPDATE ON "financial_responsibility_allocations" FOR EACH ROW EXECUTE FUNCTION "validate_financial_responsibility_total"();
 
 ALTER TABLE "financial_responsibility_allocations" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "payment_arrangements" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "manual_payment_verifications" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "financial_responsibility_no_direct_client_access" ON "financial_responsibility_allocations" FOR ALL USING (false) WITH CHECK (false);
-CREATE POLICY "payment_arrangements_no_direct_client_access" ON "payment_arrangements" FOR ALL USING (false) WITH CHECK (false);
 CREATE POLICY "manual_payment_verifications_no_direct_client_access" ON "manual_payment_verifications" FOR ALL USING (false) WITH CHECK (false);

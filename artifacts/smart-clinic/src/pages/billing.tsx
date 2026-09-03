@@ -84,6 +84,7 @@ export default function Billing() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPayOpen, setIsPayOpen] = useState(false);
+  const [isFinanceOpen, setIsFinanceOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [search, setSearch] = useState("");
@@ -106,10 +107,16 @@ export default function Billing() {
     enabled: !!clinicId && !!selectedInvoice?.id,
   });
 
-  const { data: arrangements = [] } = useQuery({
-    queryKey: ["payment-arrangements", clinicId, selectedInvoice?.id],
-    queryFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice.id}/payment-arrangements`),
-    enabled: !!clinicId && !!selectedInvoice?.id,
+  const { data: invoiceDetail } = useQuery({
+    queryKey: ["invoice-detail", clinicId, selectedInvoice?.id],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice.id}`),
+    enabled: !!clinicId && !!selectedInvoice?.id && isFinanceOpen,
+  });
+
+  const { data: refunds = [] } = useQuery({
+    queryKey: ["invoice-refunds", clinicId, selectedInvoice?.id],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice.id}/refunds`),
+    enabled: !!clinicId && !!selectedInvoice?.id && isFinanceOpen,
   });
 
   const { data: awaitingEft = [] } = useQuery({
@@ -166,6 +173,25 @@ export default function Billing() {
     onError: (e: any) => toast({ variant: "destructive", title: "Failed to record payment", description: e.message }),
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice?.id}/payment-provider/checkout`, { method: "POST", body: JSON.stringify({ successUrl: window.location.href, cancelUrl: window.location.href, failureUrl: window.location.href }) }),
+    onSuccess: (transaction: any) => { window.location.assign(transaction.checkoutUrl); },
+    onError: (e: any) => toast({ variant: "destructive", title: "Unable to start online payment", description: e.message }),
+  });
+
+  const [allocation, setAllocation] = useState({ payerType: "patient", allocatedAmount: "", payerReference: "", authorizationReference: "" });
+  const allocationMutation = useMutation({
+    mutationFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice?.id}/financial-responsibilities`, { method: "POST", body: JSON.stringify({ ...allocation, allocatedAmount: Number(allocation.allocatedAmount), payerReference: allocation.payerReference || null, authorizationReference: allocation.authorizationReference || null }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["financial-responsibilities", clinicId, selectedInvoice?.id] }); setAllocation({ payerType: "patient", allocatedAmount: "", payerReference: "", authorizationReference: "" }); toast({ title: "Financial responsibility recorded" }); },
+    onError: (e: any) => toast({ variant: "destructive", title: "Unable to record responsibility", description: e.message }),
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: (payment: any) => apiFetch(`/clinics/${clinicId}/payments/${payment.id}/refunds`, { method: "POST", body: JSON.stringify({ amount: Number(payment.amount), reason: "Staff-authorised refund" }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["invoice-detail", clinicId, selectedInvoice?.id] }); queryClient.invalidateQueries({ queryKey: ["invoice-refunds", clinicId, selectedInvoice?.id] }); queryClient.invalidateQueries({ queryKey: ["invoices", clinicId] }); queryClient.invalidateQueries({ queryKey: ["billing-stats", clinicId] }); toast({ title: "Refund processed or awaiting provider confirmation" }); },
+    onError: (e: any) => toast({ variant: "destructive", title: "Unable to refund payment", description: e.message }),
+  });
+
   const billingEnabled = stats?.billingEnabled !== false;
   const canManage = ["clinic_admin", "cashier", "receptionist"].includes(role);
   const isAdmin = role === "clinic_admin";
@@ -178,7 +204,6 @@ export default function Billing() {
   const [paymentTiming, setPaymentTiming] = useState("END_OF_VISIT");
   const [allowedManualPaymentMethods, setAllowedManualPaymentMethods] = useState<string[]>(["cash", "card", "transfer", "mobile_money"]);
   const [eftVerificationRequired, setEftVerificationRequired] = useState(false);
-  const [paymentArrangementsEnabled, setPaymentArrangementsEnabled] = useState(false);
   const [bankingInitialized, setBankingInitialized] = useState(false);
 
   React.useEffect(() => {
@@ -191,7 +216,6 @@ export default function Billing() {
       setPaymentTiming(stats.paymentTiming ?? "END_OF_VISIT");
       setAllowedManualPaymentMethods(stats.allowedManualPaymentMethods ?? ["cash", "card", "transfer", "mobile_money"]);
       setEftVerificationRequired(stats.eftVerificationRequired ?? false);
-      setPaymentArrangementsEnabled(stats.paymentArrangementsEnabled ?? false);
       setBankingInitialized(true);
     }
   }, [stats, bankingInitialized]);
@@ -208,7 +232,6 @@ export default function Billing() {
         paymentTiming,
         allowedManualPaymentMethods,
         eftVerificationRequired,
-        paymentArrangementsEnabled,
       }),
     }),
     onSuccess: () => {
@@ -227,6 +250,11 @@ export default function Billing() {
       toast({ title: "EFT verified and payment completed" });
     },
     onError: (e: any) => toast({ variant: "destructive", title: "Unable to verify EFT", description: e.message }),
+  });
+  const rejectEftMutation = useMutation({
+    mutationFn: (verificationId: string) => apiFetch(`/clinics/${clinicId}/manual-payment-verifications/${verificationId}/reject`, { method: "POST", body: JSON.stringify({ reason: "Rejected after staff review" }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["awaiting-eft-verifications", clinicId] }); toast({ title: "EFT verification rejected" }); },
+    onError: (e: any) => toast({ variant: "destructive", title: "Unable to reject EFT", description: e.message }),
   });
 
   if (statsLoading) {
@@ -407,10 +435,11 @@ export default function Billing() {
                       <p className="font-semibold">R {Number(inv.totalAmount).toFixed(2)}</p>
                       {Number(inv.balance) > 0 && <p className="text-xs text-orange-600">Balance: R {Number(inv.balance).toFixed(2)}</p>}
                     </div>
-                    {canManage && inv.status !== "paid" && inv.status !== "cancelled" && (
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedInvoice(inv); payForm.setValue("amount", Number(inv.balance)); setIsPayOpen(true); }}>
-                        <CreditCard className="w-3 h-3 mr-1" /> Pay
-                      </Button>
+                    {canManage && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedInvoice(inv); setIsFinanceOpen(true); }}>Details</Button>
+                        {inv.status !== "paid" && inv.status !== "cancelled" && <Button variant="outline" size="sm" onClick={() => { setSelectedInvoice(inv); payForm.setValue("amount", Number(inv.balance)); setIsPayOpen(true); }}><CreditCard className="w-3 h-3 mr-1" /> Pay</Button>}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -429,9 +458,9 @@ export default function Billing() {
           </CardHeader>
           <CardContent className="space-y-2">
             {awaitingEft.map((verification: any) => (
-              <div key={verification.id} className="flex items-center justify-between gap-3 rounded border p-3 text-sm">
-                <span>Invoice {verification.invoiceId.slice(0, 8)} · R {Number(verification.amount).toFixed(2)}{verification.reference ? ` · ${verification.reference}` : ""}</span>
-                <Button size="sm" onClick={() => verifyEftMutation.mutate(verification.id)} disabled={verifyEftMutation.isPending}>Verify EFT</Button>
+              <div key={verification.verification.id} className="flex items-center justify-between gap-3 rounded border p-3 text-sm">
+                <span>{verification.patientName} · {verification.invoiceCode} · R {Number(verification.verification.amount).toFixed(2)} · {format(new Date(verification.verification.createdAt), "d MMM yyyy HH:mm")} · transfer{verification.verification.reference ? ` · ${verification.verification.reference}` : ""}</span>
+                <div className="flex gap-2"><Button size="sm" onClick={() => verifyEftMutation.mutate(verification.verification.id)} disabled={verifyEftMutation.isPending}>Verify EFT</Button><Button size="sm" variant="outline" onClick={() => rejectEftMutation.mutate(verification.verification.id)} disabled={rejectEftMutation.isPending}>Reject</Button></div>
               </div>
             ))}
           </CardContent>
@@ -513,7 +542,6 @@ export default function Billing() {
               </div>
               <div className="space-y-2 pt-6 text-sm">
                 <label className="flex items-center gap-2"><input type="checkbox" checked={eftVerificationRequired} onChange={e => setEftVerificationRequired(e.target.checked)} /> Require manual EFT verification</label>
-                <label className="flex items-center gap-2"><input type="checkbox" checked={paymentArrangementsEnabled} onChange={e => setPaymentArrangementsEnabled(e.target.checked)} /> Allow payment arrangements</label>
                 <div className="pt-1">Manual methods: {["cash", "card", "transfer", "mobile_money"].map(method => <label key={method} className="mr-3 inline-flex items-center gap-1"><input type="checkbox" checked={allowedManualPaymentMethods.includes(method)} onChange={e => setAllowedManualPaymentMethods(current => e.target.checked ? [...current, method] : current.filter(value => value !== method))} /> {method.replace("_", " ")}</label>)}</div>
               </div>
             </div>
@@ -532,6 +560,18 @@ export default function Billing() {
       )}
 
       {/* Payment Dialog */}
+      <Dialog open={isFinanceOpen} onOpenChange={setIsFinanceOpen}>
+        <DialogContent className="sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Invoice Financial Details</DialogTitle></DialogHeader>
+          {selectedInvoice && <div className="space-y-5 text-sm">
+            <div className="grid grid-cols-2 gap-3 rounded border p-3"><span>Invoice total: <b>R {Number(invoiceDetail?.totalAmount ?? selectedInvoice.totalAmount).toFixed(2)}</b></span><span>Payment received: <b>R {Number(invoiceDetail?.paidAmount ?? selectedInvoice.paidAmount ?? 0).toFixed(2)}</b></span><span>Outstanding: <b>R {Number(invoiceDetail?.balance ?? selectedInvoice.balance).toFixed(2)}</b></span><span>Status: <b>{(invoiceDetail?.status ?? selectedInvoice.status).toUpperCase()}</b></span></div>
+            <div><p className="font-medium mb-2">Responsibility (not payment received)</p>{responsibilities.length ? responsibilities.map((item: any) => <div key={item.id} className="flex justify-between border-b py-1"><span>{item.payerType.replaceAll("_", " ")}{item.payerReference ? ` · ${item.payerReference}` : ""}</span><span>R {Number(item.allocatedAmount).toFixed(2)} · {item.claimStatus}</span></div>) : <p className="text-muted-foreground">No responsibilities recorded.</p>}</div>
+            {canManage && <div className="grid grid-cols-2 gap-2 border rounded p-3"><Select value={allocation.payerType} onValueChange={payerType => setAllocation(current => ({ ...current, payerType }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["patient", "medical_aid", "government", "ngo", "donor", "sponsor", "clinic"].map(type => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}</SelectContent></Select><Input type="number" min="0" step="0.01" placeholder="Amount" value={allocation.allocatedAmount} onChange={e => setAllocation(current => ({ ...current, allocatedAmount: e.target.value }))}/><Input placeholder="Payer reference" value={allocation.payerReference} onChange={e => setAllocation(current => ({ ...current, payerReference: e.target.value }))}/><Input placeholder="Authorisation reference" value={allocation.authorizationReference} onChange={e => setAllocation(current => ({ ...current, authorizationReference: e.target.value }))}/><Button className="col-span-2" onClick={() => allocationMutation.mutate()} disabled={!allocation.allocatedAmount || allocationMutation.isPending}>Add responsibility</Button></div>}
+            <div><p className="font-medium mb-2">Payments and refunds</p>{(invoiceDetail?.payments ?? []).map((payment: any) => <div key={payment.id} className="flex justify-between border-b py-1"><span>{payment.paymentMethod} · R {Number(payment.amount).toFixed(2)} · {format(new Date(payment.paidAt), "d MMM yyyy")}</span>{["clinic_admin", "cashier"].includes(role) && <Button size="sm" variant="outline" disabled={refundMutation.isPending} onClick={() => refundMutation.mutate(payment)}>Refund</Button>}</div>)}{refunds.map((refund: any) => <div key={refund.id} className="text-xs text-muted-foreground py-1">Refund: R {Number(refund.amount).toFixed(2)} · {refund.status} · {refund.origin}</div>)}</div>
+          </div>}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isPayOpen} onOpenChange={setIsPayOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader><DialogTitle>Record Payment</DialogTitle></DialogHeader>
@@ -541,9 +581,6 @@ export default function Billing() {
               <p>Balance: <span className="font-semibold text-foreground">R {Number(selectedInvoice.balance).toFixed(2)}</span></p>
               {responsibilities.length > 0 && (
                 <p className="mt-2 text-xs">Responsibilities: {responsibilities.map((item: any) => `${item.payerType} R ${Number(item.allocatedAmount).toFixed(2)}`).join(", ")}</p>
-              )}
-              {arrangements.length > 0 && (
-                <p className="mt-1 text-xs">Payment arrangements: {arrangements.map((item: any) => `${item.status} R ${Number(item.arrangementAmount).toFixed(2)}`).join(", ")}</p>
               )}
             </div>
           )}
@@ -561,12 +598,7 @@ export default function Billing() {
                   <FormLabel>Payment Method</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                    </SelectContent>
+                    <SelectContent>{allowedManualPaymentMethods.map(method => <SelectItem key={method} value={method}>{method === "transfer" ? "Bank Transfer" : method.replace("_", " ")}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
@@ -580,6 +612,7 @@ export default function Billing() {
               <Button type="submit" className="w-full" disabled={recordPaymentMutation.isPending}>
                 {recordPaymentMutation.isPending ? "Recording..." : "Record Payment"}
               </Button>
+              {stats?.onlinePaymentsEnabled && <Button type="button" variant="outline" className="w-full" disabled={checkoutMutation.isPending} onClick={() => checkoutMutation.mutate()}>{checkoutMutation.isPending ? "Opening checkout..." : "Open secure Yoco checkout"}</Button>}
             </form>
           </Form>
         </DialogContent>

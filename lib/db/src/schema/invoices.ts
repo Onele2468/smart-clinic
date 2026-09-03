@@ -39,6 +39,7 @@ export const paymentsTable = pgTable("payments", {
   receivedById: uuid("received_by_id").references(() => usersTable.id),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   paymentMethod: text("payment_method").notNull().default("cash"), // cash | card | transfer | mobile_money
+  providerTransactionId: uuid("provider_transaction_id"),
   reference: text("reference"),
   paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

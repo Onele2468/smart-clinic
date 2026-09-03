@@ -50,6 +50,7 @@ export async function recordInvoicePayment(input: RecordPaymentInput) {
     amount: String(amountToApply),
     paymentMethod: input.paymentMethod,
     reference: input.reference ?? null,
+    providerTransactionId: input.providerTransactionId ?? null,
     paidAt: input.paidAt ?? new Date(),
   }).returning();
 

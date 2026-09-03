@@ -10,6 +10,7 @@ import {
   updateProviderTransactionStatus,
 } from "../services/payment-gateways/provider-transaction.service";
 import { processWorkflowEvent } from "../services/workflow/workflow-engine.service";
+import { findPendingProviderRefund } from "../services/billing/refund.service";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -91,7 +92,16 @@ router.post("/:provider/:clinicId", async (req, res): Promise<void> => {
         paidAt: event.paidAt ?? new Date(),
         source: "provider",
       });
-    } else if (event.status === "failed" || event.status === "expired" || event.status === "refunded") {
+    } else if (event.status === "refunded") {
+      const refund = event.providerRefundId
+        ? await findPendingProviderRefund({ clinicId, providerTransactionId: transaction.id, providerRefundId: event.providerRefundId })
+        : null;
+      if (refund) {
+        await processWorkflowEvent(WorkflowEvent.PAYMENT_REFUNDED, { clinicId, refundId: refund.id, patientId: transaction.patientId, userRole: "payment_gateway" });
+      } else {
+        logger.warn({ clinicId, transactionId: transaction.id, providerRefundId: event.providerRefundId }, "Provider refund event has no pending authorised refund");
+      }
+    } else if (event.status === "failed" || event.status === "expired") {
       await updateProviderTransactionStatus({
         transactionId: transaction.id,
         status: event.status,

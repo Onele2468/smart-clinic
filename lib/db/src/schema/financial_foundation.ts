@@ -20,24 +20,6 @@ export const financialResponsibilityAllocationsTable = pgTable("financial_respon
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const paymentArrangementsTable = pgTable("payment_arrangements", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  clinicId: uuid("clinic_id").notNull().references(() => clinicsTable.id),
-  invoiceId: uuid("invoice_id").notNull().references(() => invoicesTable.id),
-  patientId: uuid("patient_id").notNull().references(() => patientsTable.id),
-  arrangementAmount: numeric("arrangement_amount", { precision: 12, scale: 2 }).notNull(),
-  terms: text("terms"),
-  schedule: text("schedule"),
-  status: text("status").notNull().default("requested"),
-  createdById: uuid("created_by_id").notNull().references(() => usersTable.id),
-  approvedById: uuid("approved_by_id").references(() => usersTable.id),
-  approvedAt: timestamp("approved_at", { withTimezone: true }),
-  cancelledById: uuid("cancelled_by_id").references(() => usersTable.id),
-  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
-
 export const manualPaymentVerificationsTable = pgTable("manual_payment_verifications", {
   id: uuid("id").primaryKey().defaultRandom(),
   clinicId: uuid("clinic_id").notNull().references(() => clinicsTable.id),
@@ -56,5 +38,4 @@ export const manualPaymentVerificationsTable = pgTable("manual_payment_verificat
 });
 
 export type FinancialResponsibilityAllocation = typeof financialResponsibilityAllocationsTable.$inferSelect;
-export type PaymentArrangement = typeof paymentArrangementsTable.$inferSelect;
 export type ManualPaymentVerification = typeof manualPaymentVerificationsTable.$inferSelect;

@@ -46,8 +46,23 @@ export interface CreateCheckoutResult {
   provider: PaymentProviderName;
   providerCheckoutId: string;
   providerTransactionId?: string | null;
+  providerRefundId?: string | null;
   checkoutUrl: string;
   providerReference?: string | null;
+  rawProviderPayload: Record<string, unknown>;
+}
+
+export interface RefundPaymentInput {
+  providerCheckoutId: string;
+  amount: number;
+  currency: string;
+  idempotencyKey: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RefundPaymentResult {
+  providerRefundId: string;
+  status: "succeeded" | "pending";
   rawProviderPayload: Record<string, unknown>;
 }
 
@@ -57,6 +72,7 @@ export interface VerifiedProviderEvent {
   eventType: string;
   providerCheckoutId?: string | null;
   providerTransactionId?: string | null;
+  providerRefundId?: string | null;
   amount?: number | null;
   currency?: string | null;
   paymentMethod?: string | null;
@@ -69,5 +85,6 @@ export interface PaymentGateway {
   readonly provider: PaymentProviderName;
   validateCurrency(currency: string): void;
   createCheckout(config: PaymentGatewayConfig, input: CreateCheckoutInput): Promise<CreateCheckoutResult>;
+  refundPayment(config: PaymentGatewayConfig, input: RefundPaymentInput): Promise<RefundPaymentResult>;
   verifyWebhook(config: PaymentGatewayConfig, rawBody: Buffer, headers: Record<string, string | string[] | undefined>): VerifiedProviderEvent;
 }

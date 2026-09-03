@@ -3,7 +3,6 @@ import {
   financialResponsibilityAllocationsTable,
   invoicesTable,
   manualPaymentVerificationsTable,
-  paymentArrangementsTable,
 } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -68,31 +67,10 @@ export async function reopenManualTransferVerification(params: { clinicId: strin
     ));
 }
 
-export async function createPaymentArrangement(params: {
-  clinicId: string; invoiceId: string; patientId: string; arrangementAmount: number; terms?: string | null; schedule?: string | null; createdById: string;
-}) {
-  const [arrangement] = await db.insert(paymentArrangementsTable).values({
-    ...params, arrangementAmount: String(params.arrangementAmount), terms: params.terms ?? null, schedule: params.schedule ?? null,
-  }).returning();
-  return arrangement;
-}
-
-export async function approvePaymentArrangement(params: { clinicId: string; arrangementId: string; approvedById: string }) {
-  const [arrangement] = await db.update(paymentArrangementsTable)
-    .set({ status: "approved", approvedById: params.approvedById, approvedAt: new Date() })
-    .where(and(eq(paymentArrangementsTable.id, params.arrangementId), eq(paymentArrangementsTable.clinicId, params.clinicId), eq(paymentArrangementsTable.status, "requested")))
+export async function rejectManualTransferVerification(params: { clinicId: string; verificationId: string; rejectedById: string; reason?: string | null }) {
+  const [verification] = await db.update(manualPaymentVerificationsTable)
+    .set({ status: "rejected", verifiedById: params.rejectedById, verifiedAt: new Date(), rejectionReason: params.reason ?? null })
+    .where(and(eq(manualPaymentVerificationsTable.id, params.verificationId), eq(manualPaymentVerificationsTable.clinicId, params.clinicId), eq(manualPaymentVerificationsTable.status, "awaiting_manual_verification")))
     .returning();
-  return arrangement ?? null;
-}
-
-export async function cancelPaymentArrangement(params: { clinicId: string; arrangementId: string; cancelledById: string }) {
-  const [arrangement] = await db.update(paymentArrangementsTable)
-    .set({ status: "cancelled", cancelledById: params.cancelledById, cancelledAt: new Date() })
-    .where(and(
-      eq(paymentArrangementsTable.id, params.arrangementId),
-      eq(paymentArrangementsTable.clinicId, params.clinicId),
-      sql`${paymentArrangementsTable.status} IN ('requested', 'approved', 'active')`,
-    ))
-    .returning();
-  return arrangement ?? null;
+  return verification ?? null;
 }

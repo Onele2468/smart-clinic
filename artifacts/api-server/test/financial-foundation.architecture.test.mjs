@@ -31,7 +31,7 @@ test("EFT awaits manual verification and only completes through the workflow", (
 });
 
 test("financial foundation is RLS-protected and exposes no AI mutation path", () => {
-  for (const table of ["financial_responsibility_allocations", "payment_arrangements", "manual_payment_verifications"]) {
+  for (const table of ["financial_responsibility_allocations", "manual_payment_verifications"]) {
     assert.match(migration, new RegExp(`ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`));
   }
   assert.doesNotMatch(service, /ConversationAI|Ollama|processWorkflowEvent/);
@@ -46,5 +46,5 @@ test("provider webhook rejects clinic, currency, and paid-amount mismatches", ()
 
 test("billing access follows configuration instead of clinic type", () => {
   assert.doesNotMatch(billingUi, /clinicType === "government"/);
-  assert.match(route, /paymentArrangementsEnabled/);
+  assert.match(route, /billingEnabled/);
 });

@@ -36,7 +36,6 @@ export const clinicsTable = pgTable("clinics", {
   paymentTiming: text("payment_timing").notNull().default("END_OF_VISIT"),
   allowedManualPaymentMethods: jsonb("allowed_manual_payment_methods").notNull().default(["cash", "card", "transfer", "mobile_money"]),
   eftVerificationRequired: boolean("eft_verification_required").notNull().default(false),
-  paymentArrangementsEnabled: boolean("payment_arrangements_enabled").notNull().default(false),
   // WhatsApp automation (per-clinic credentials)
   whatsappEnabled: boolean("whatsapp_enabled").notNull().default(false),
   whatsappProvider: text("whatsapp_provider").notNull().default("meta"), // meta | twilio | 360dialog
