@@ -46,6 +46,10 @@ payment_recorded: {
   type: "billing",
   title: "Payment Received",
 },
+payment_refunded: {
+  type: "billing",
+  title: "Payment Refunded",
+},
 
   // Inventory / suppliers
   supplier_restock: { type: "supplier_delivery", title: "Supplier Stock Delivery" },

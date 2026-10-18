@@ -11,6 +11,7 @@ export type WhatsAppTriggerAction =
   | "dispense"
   | "invoice_created"
   | "payment_recorded"
+  | "payment_refunded"
   | "patient_added"
   | "nurse_assessment_completed"
   | "consultation_completed"
@@ -28,6 +29,7 @@ export const WHATSAPP_TRIGGER_ACTIONS: ReadonlySet<WhatsAppTriggerAction> = new 
   "dispense",
   "invoice_created",
   "payment_recorded",
+  "payment_refunded",
   "patient_added",
   "nurse_assessment_completed",
   "consultation_completed",

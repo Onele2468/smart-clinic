@@ -7,6 +7,7 @@ import {
   labRequestsTable,
   labResultsTable,
   invoicesTable,
+  paymentRefundsTable,
   usersTable,
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
@@ -296,6 +297,25 @@ async function resolveTemplateContext(
         context: ctx,
         patientId: row.patientId,
       };
+    }
+
+    case "payment_refunded": {
+      const [row] = await db
+        .select({
+          patientId: invoicesTable.patientId,
+          amount: paymentRefundsTable.amount,
+          patientFirst: patientsTable.firstName,
+          patientLast: patientsTable.lastName,
+          contactNumber: patientsTable.contactNumber,
+        })
+        .from(paymentRefundsTable)
+        .innerJoin(invoicesTable, eq(paymentRefundsTable.invoiceId, invoicesTable.id))
+        .innerJoin(patientsTable, eq(invoicesTable.patientId, patientsTable.id))
+        .where(and(eq(paymentRefundsTable.id, entityId), eq(paymentRefundsTable.clinicId, clinicId)));
+      if (!row) return { phone: null, context: ctx };
+      ctx.patientName = `${row.patientFirst} ${row.patientLast}`.trim();
+      ctx.amount = String(row.amount ?? "");
+      return { phone: normalizePhoneNumber(row.contactNumber), context: ctx, patientId: row.patientId };
     }
 
     default:

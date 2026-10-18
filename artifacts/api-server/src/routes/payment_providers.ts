@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, requireClinicMember, requireClinicModule, requireRole } from "../lib/auth";
 import { createPaymentCheckout } from "../services/payment-gateways/payment-gateway.service";
+import { db, paymentProviderTransactionsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -38,6 +40,29 @@ router.post(
     } catch (err: unknown) {
       res.status(400).json({ error: err instanceof Error ? err.message : "Failed to create checkout" });
     }
+  },
+);
+
+router.get(
+  "/clinics/:clinicId/payment-provider/transactions/:transactionId",
+  requireAuth as any,
+  requireClinicMember as any,
+  requireClinicModule("billing") as any,
+  requireRole("clinic_admin", "cashier", "receptionist") as any,
+  async (req, res): Promise<void> => {
+    const clinicId = Array.isArray(req.params.clinicId) ? req.params.clinicId[0] : req.params.clinicId;
+    const transactionId = Array.isArray(req.params.transactionId) ? req.params.transactionId[0] : req.params.transactionId;
+    const [transaction] = await db.select({
+      id: paymentProviderTransactionsTable.id,
+      invoiceId: paymentProviderTransactionsTable.invoiceId,
+      status: paymentProviderTransactionsTable.status,
+      amount: paymentProviderTransactionsTable.amount,
+      currency: paymentProviderTransactionsTable.currency,
+      updatedAt: paymentProviderTransactionsTable.updatedAt,
+    }).from(paymentProviderTransactionsTable)
+      .where(and(eq(paymentProviderTransactionsTable.id, transactionId), eq(paymentProviderTransactionsTable.clinicId, clinicId)));
+    if (!transaction) { res.status(404).json({ error: "Payment transaction not found" }); return; }
+    res.json(transaction);
   },
 );
 

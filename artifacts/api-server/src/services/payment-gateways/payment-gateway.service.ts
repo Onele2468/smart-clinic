@@ -16,6 +16,11 @@ import {
 } from "./provider-transaction.service";
 
 const DEFAULT_PAYMENT_CURRENCY = "ZAR";
+const PAYMENT_TRANSACTION_PLACEHOLDER = "PAYMENT_TRANSACTION_ID";
+
+function resolveCheckoutReturnUrl(value: string | null | undefined, transactionId: string): string | null {
+  return value ? value.replaceAll(PAYMENT_TRANSACTION_PLACEHOLDER, transactionId) : null;
+}
 
 const providers: Record<PaymentProviderName, PaymentGateway> = {
   yoco: new YocoProvider(),
@@ -116,9 +121,9 @@ export async function createPaymentCheckout(params: {
     invoiceCode: invoice.invoiceCode,
     amount,
     currency: config.currency,
-    successUrl: params.successUrl ?? null,
-    cancelUrl: params.cancelUrl ?? null,
-    failureUrl: params.failureUrl ?? null,
+    successUrl: resolveCheckoutReturnUrl(params.successUrl, transaction.id),
+    cancelUrl: resolveCheckoutReturnUrl(params.cancelUrl, transaction.id),
+    failureUrl: resolveCheckoutReturnUrl(params.failureUrl, transaction.id),
     idempotencyKey,
   };
 

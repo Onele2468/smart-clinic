@@ -277,14 +277,21 @@ router.post("/clinics/:clinicId/payments/:paymentId/refunds", requireAuth as any
     const providerTransaction = payment.providerTransactionId
       ? (await db.select().from(paymentProviderTransactionsTable).where(and(eq(paymentProviderTransactionsTable.id, payment.providerTransactionId), eq(paymentProviderTransactionsTable.clinicId, clinicId))))[0]
       : null;
+    if (payment.providerTransactionId && !providerTransaction) {
+      res.status(409).json({ error: "Provider payment transaction cannot be resolved for this clinic" });
+      return;
+    }
+    if (providerTransaction && !providerTransaction.providerCheckoutId) {
+      res.status(409).json({ error: "Provider payment cannot be refunded because its checkout reference is missing" });
+      return;
+    }
     const origin = providerTransaction ? "provider" as const : "manual" as const;
     const { refund } = await createPendingRefund({ clinicId, paymentId, amount: parsed.data.amount, refundMethod: providerTransaction?.provider ?? payment.paymentMethod, origin, providerTransactionId: providerTransaction?.id ?? null, authorisedById: user.userId, reason: parsed.data.reason ?? null });
     if (providerTransaction) {
-      if (!providerTransaction.providerCheckoutId) throw new Error("Provider payment cannot be refunded because its checkout reference is missing");
       try {
         const config = await getClinicPaymentGatewayConfig(clinicId);
         const gateway = getPaymentGateway(providerTransaction.provider);
-        const providerRefund = await gateway.refundPayment(config, { providerCheckoutId: providerTransaction.providerCheckoutId, amount: parsed.data.amount, currency: providerTransaction.currency, idempotencyKey: `refund:${refund.id}`, metadata: { refundId: refund.id, paymentId, invoiceId: payment.invoiceId } });
+        const providerRefund = await gateway.refundPayment(config, { providerCheckoutId: providerTransaction.providerCheckoutId!, amount: parsed.data.amount, currency: providerTransaction.currency, idempotencyKey: `refund:${refund.id}`, metadata: { refundId: refund.id, paymentId, invoiceId: payment.invoiceId } });
         await attachProviderRefund({ refundId: refund.id, clinicId, providerRefundId: providerRefund.providerRefundId });
         if (providerRefund.status === "succeeded") {
           const [invoice] = await db.select({ patientId: invoicesTable.patientId }).from(invoicesTable).where(and(eq(invoicesTable.id, payment.invoiceId), eq(invoicesTable.clinicId, clinicId)));

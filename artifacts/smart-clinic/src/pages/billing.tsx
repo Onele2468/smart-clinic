@@ -86,6 +86,7 @@ export default function Billing() {
   const [isPayOpen, setIsPayOpen] = useState(false);
   const [isFinanceOpen, setIsFinanceOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [checkoutTransactionId] = useState(() => new URLSearchParams(window.location.search).get("paymentTransactionId"));
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [search, setSearch] = useState("");
 
@@ -124,6 +125,20 @@ export default function Billing() {
     queryFn: () => apiFetch(`/clinics/${clinicId}/manual-payment-verifications`),
     enabled: !!clinicId && ["clinic_admin", "cashier"].includes(role),
   });
+
+  const { data: checkoutStatus } = useQuery({
+    queryKey: ["payment-provider-transaction", clinicId, checkoutTransactionId],
+    queryFn: () => apiFetch(`/clinics/${clinicId}/payment-provider/transactions/${checkoutTransactionId}`),
+    enabled: !!clinicId && !!checkoutTransactionId,
+    refetchInterval: (query) => ["created", "checkout_generated", "awaiting_payment"].includes(query.state.data?.status) ? 3000 : false,
+  });
+
+  React.useEffect(() => {
+    if (checkoutStatus?.status === "paid") {
+      queryClient.invalidateQueries({ queryKey: ["invoices", clinicId] });
+      queryClient.invalidateQueries({ queryKey: ["billing-stats", clinicId] });
+    }
+  }, [checkoutStatus?.status, clinicId, queryClient]);
 
   const { data: patients } = useListPatients(
     clinicId, {},
@@ -174,7 +189,10 @@ export default function Billing() {
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: () => apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice?.id}/payment-provider/checkout`, { method: "POST", body: JSON.stringify({ successUrl: window.location.href, cancelUrl: window.location.href, failureUrl: window.location.href }) }),
+    mutationFn: () => {
+      const returnUrl = `${window.location.origin}${window.location.pathname}?paymentTransactionId=PAYMENT_TRANSACTION_ID`;
+      return apiFetch(`/clinics/${clinicId}/invoices/${selectedInvoice?.id}/payment-provider/checkout`, { method: "POST", body: JSON.stringify({ successUrl: returnUrl, cancelUrl: returnUrl, failureUrl: returnUrl }) });
+    },
     onSuccess: (transaction: any) => { window.location.assign(transaction.checkoutUrl); },
     onError: (e: any) => toast({ variant: "destructive", title: "Unable to start online payment", description: e.message }),
   });
@@ -383,6 +401,14 @@ export default function Billing() {
           </Dialog>
         )}
       </div>
+
+      {checkoutTransactionId && (
+        <Card>
+          <CardContent className="p-4 text-sm">
+            {checkoutStatus?.status === "paid" ? "Yoco payment has been verified. Your invoice is being refreshed." : checkoutStatus?.status === "failed" || checkoutStatus?.status === "expired" ? "Yoco payment was not completed. No payment has been recorded." : "Payment return received. Waiting for verified confirmation from Yoco; this page does not mark the invoice as paid."}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
